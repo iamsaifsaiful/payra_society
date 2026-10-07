@@ -9,6 +9,7 @@ import '../../services/session.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/shell_nav.dart';
+import '../../widgets/statement_export.dart';
 import 'receipts_screen.dart';
 import 'society_screen.dart';
 
@@ -85,6 +86,16 @@ class ProfileScreen extends StatelessWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.brand),
+                    title: const Text('হিসাব বিবরণী (PDF)'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => showMemberStatementSheet(
+                      context,
+                      session: s,
+                      build: (from, to) => StatementRequest.mine(u.memberId, from, to),
+                    ),
+                  ),
                   _Nav(icon: Icons.receipt_long_rounded, text: 'আমার রসিদ', page: ReceiptsScreen(repo: repo)),
                   _Nav(icon: Icons.groups_rounded, text: 'সমিতির হিসাব ও তহবিল', page: SocietyScreen(repo: repo)),
                 ],

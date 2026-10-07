@@ -3,6 +3,7 @@ import 'package:payra_society/api/api_client.dart';
 import 'package:payra_society/api/models.dart';
 import 'package:payra_society/logic/format.dart';
 import 'package:payra_society/services/member_repo.dart';
+import 'package:payra_society/widgets/statement_export.dart';
 
 void main() {
   group('format', () {
@@ -134,5 +135,25 @@ void main() {
       ],
     });
     expect(a.regularStreak, 4);
+  });
+
+  group('statement requests', () {
+    test('member, admin and society statements hit the right pages', () {
+      final mine = StatementRequest.mine('PSM1001', '2026-01-01', '2026-06-30');
+      expect(mine.path, '/member/statement.html');
+      expect(mine.query, {'from': '2026-01-01', 'to': '2026-06-30'});
+      expect(mine.fileName, 'statement-PSM1001-2026-01-01-2026-06-30.pdf');
+      final all = StatementRequest.mine('PSM1001', '', '');
+      expect(all.query, isEmpty);
+      final adm = StatementRequest.member(7, 'PSM1007', '', '');
+      expect(adm.path, '/members/7/statement.html');
+      expect(adm.linkBody['id'], 7);
+      final y = StatementRequest.society(yearly: true, key: '2025');
+      expect(y.query, {'type': 'year', 'year': '2025'});
+      expect(y.linkBody, {'kind': 'society', 'type': 'year', 'key': '2025'});
+      final m = StatementRequest.society(yearly: false, key: '2026-10');
+      expect(m.query, {'type': 'month', 'month': '2026-10'});
+      expect(m.fileName, 'society-month-2026-10.pdf');
+    });
   });
 }

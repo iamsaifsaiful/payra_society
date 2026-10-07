@@ -15,6 +15,7 @@ import '../../widgets/member_widgets.dart';
 import '../member/home_screen.dart' show ArrearsCard;
 import '../../services/admin_more.dart';
 import '../../widgets/shell_nav.dart';
+import '../../widgets/statement_export.dart';
 import 'entry_screen.dart';
 import 'member_form_screen.dart';
 
@@ -228,6 +229,20 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       appBar: AppBar(
         title: const Text('সদস্যের হিসাব'),
         actions: [
+          IconButton(
+            tooltip: 'স্টেটমেন্ট PDF',
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            onPressed: () async {
+              final m = await repo.member(memberId);
+              if (!context.mounted) return;
+              showMemberStatementSheet(
+                context,
+                session: SessionScope.read(context),
+                title: '${m.name}-এর হিসাব বিবরণী',
+                build: (from, to) => StatementRequest.member(memberId, m.uid, from, to),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'তথ্য বদলান',
             icon: const Icon(Icons.edit_rounded),

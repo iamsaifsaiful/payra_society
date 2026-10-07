@@ -384,7 +384,7 @@ class _NewProjectScreenState extends State<NewProjectScreen> {
       setState(() {
         _candidates = ov.members
             .where((m) => m.active)
-            .map((m) => _Candidate(m, irregular.contains(m.uid), m.current > 0 && !irregular.contains(m.uid)))
+            .map((m) => _Candidate(m, irregular.contains(m.uid), m.current > 0))
             .toList()
           ..sort((a, b) => a.m.current.compareTo(b.m.current));
       });
@@ -573,7 +573,7 @@ class _NewProjectScreenState extends State<NewProjectScreen> {
           _f('note', 'নোট', lines: 2),
           const SectionTitle('কারা বিনিয়োগ করবেন'),
           const Text(
-            'কেনা দাম বাছাই করা সদস্যদের বর্তমান ব্যালেন্স থেকে কাটা হয় — "কম ব্যালেন্স আগে, সমান ভাগ" নিয়মে। অনিয়মিত সদস্যরা আগে থেকে বাদ রাখা আছে।',
+            'কেনা দাম বাছাই করা সদস্যদের বর্তমান ব্যালেন্স থেকে কাটা হয় — "কম ব্যালেন্স আগে, সমান ভাগ" নিয়মে।',
             style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.5),
           ),
           const SizedBox(height: 8),

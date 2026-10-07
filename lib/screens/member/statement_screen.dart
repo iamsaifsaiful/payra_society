@@ -7,6 +7,7 @@ import '../../services/member_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/shell_nav.dart';
+import '../../widgets/statement_export.dart';
 import '../../widgets/member_widgets.dart';
 import 'receipts_screen.dart';
 
@@ -86,6 +87,18 @@ class _StatementScreenState extends State<StatementScreen> {
         leading: shellBack(context),
         title: const Text('লেনদেন'),
         actions: [
+          IconButton(
+            tooltip: 'স্টেটমেন্ট PDF',
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            onPressed: () {
+              final s = SessionScope.read(context);
+              showMemberStatementSheet(
+                context,
+                session: s,
+                build: (from, to) => StatementRequest.mine(s.user?.memberId ?? 'me', from, to),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'রসিদ',
             icon: const Icon(Icons.receipt_long_rounded),

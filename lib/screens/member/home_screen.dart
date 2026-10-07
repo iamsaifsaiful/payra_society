@@ -298,9 +298,7 @@ class ArrearsCard extends StatelessWidget {
       title = arrears.irregular
           ? bn('অনিয়মিত সদস্য · ${arrears.monthsDue} মাস বকেয়া')
           : bn('${arrears.monthsDue} মাসের সঞ্চয় বকেয়া');
-      body = arrears.irregular
-          ? 'বকেয়া ${taka(arrears.amountDue)}। শোধ না হওয়া পর্যন্ত নতুন প্রজেক্ট ও শেয়ার কেনা বন্ধ থাকবে; চলমান লাভ আগের মতোই আসবে।'
-          : 'বকেয়া ${taka(arrears.amountDue)}। দ্রুত জমা দিন।';
+      body = 'বকেয়া ${taka(arrears.amountDue)}। দ্রুত জমা দিন।';
     } else if (thisMonth != null && !thisMonth.paid) {
       bad = false;
       title = bn('${monthsFull[now.month - 1]} মাসের সঞ্চয় ${taka(arrears.monthlyAmount)}');

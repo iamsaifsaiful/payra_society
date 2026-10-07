@@ -11,6 +11,7 @@ import '../../widgets/common.dart';
 import '../member/receipts_screen.dart';
 import 'pickers.dart';
 import '../../widgets/shell_nav.dart';
+import '../../widgets/statement_export.dart';
 import 'branding_screen.dart';
 import 'collections_screen.dart';
 import 'money_screen.dart';
@@ -59,6 +60,13 @@ class AdminMoreScreen extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: Column(
               children: [
+                ListTile(
+                  leading: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.brand),
+                  title: const Text('সমিতির বিবরণী'),
+                  subtitle: const Text('মাসিক ও বার্ষিক — A4 PDF, প্রিন্ট, শেয়ার'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, SocietyReportScreen(session: s)),
+                ),
                 ListTile(
                   leading: const Icon(Icons.notifications_active_rounded, color: AppColors.brand),
                   title: const Text('আদায় ও বকেয়া'),

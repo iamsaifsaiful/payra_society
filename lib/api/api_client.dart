@@ -80,6 +80,27 @@ class ApiClient {
   Future<dynamic> post(String path, [Map<String, dynamic>? body]) => _send(
       () => _http.post(uri(path), headers: _headers(json: true), body: jsonEncode(body ?? const {})));
 
+  /// Fetches a page that is not JSON (the A4 statement HTML). Errors still
+  /// come back as JSON and are turned into [ApiException].
+  Future<String> getText(String path, {Map<String, String>? query}) async {
+    if (site.isEmpty) throw const ApiException('NO_SITE', 'সমিতির ওয়েবসাইট ঠিক করা নেই।');
+    http.Response res;
+    try {
+      res = await _http.get(uri(path, query), headers: {..._headers(), 'Accept': 'text/html'}).timeout(const Duration(seconds: 60));
+    } on TimeoutException {
+      throw const ApiException('NETWORK', 'সার্ভার সাড়া দিচ্ছে না। একটু পরে আবার চেষ্টা করুন।');
+    } on SocketException {
+      throw const ApiException('NETWORK', 'ইন্টারনেট সংযোগ পাওয়া যায়নি।');
+    } on http.ClientException {
+      throw const ApiException('NETWORK', 'ইন্টারনেট সংযোগ পাওয়া যায়নি।');
+    }
+    final body = utf8.decode(res.bodyBytes, allowMalformed: true);
+    final type = res.headers['content-type'] ?? '';
+    if (res.statusCode == 200 && type.contains('text/html')) return body;
+    decode(res.statusCode, body); // throws with the server's message
+    throw ApiException('BAD_RESPONSE', 'বিবরণী পাওয়া যায়নি (কোড ${res.statusCode})।', status: res.statusCode);
+  }
+
   /// PUT sent as POST + X-HTTP-Method-Override, because some shared hosts block PUT.
   Future<dynamic> put(String path, [Map<String, dynamic>? body]) => _send(() => _http.post(
         uri(path),
