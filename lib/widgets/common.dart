@@ -108,7 +108,8 @@ class Panel extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.line),
       ),
-      child: child,
+      // ListTiles inside a panel need a Material above the coloured box for their ink.
+      child: Material(type: MaterialType.transparency, child: child),
     );
     if (onTap == null) return box;
     return Material(
