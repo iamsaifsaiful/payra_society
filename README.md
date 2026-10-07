@@ -16,4 +16,4 @@ GitHub Actions প্রতিটি push-এ analyze, test আর release APK �
 
 লোকাল: `bash tool/setup_platforms.sh && flutter pub get && flutter run --dart-define=PAYRA_SITE=https://আপনার-সাইট`
 
-ফন্ট: Hind Siliguri, Anek Bangla (SIL OFL, `assets/fonts`-এ লাইসেন্স)।
+ফন্ট: Noto Sans Bengali — স্পষ্ট বাংলা সংখ্যার জন্য (SIL OFL, `assets/fonts`-এ লাইসেন্স)।

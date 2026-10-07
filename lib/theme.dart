@@ -16,8 +16,8 @@ class AppColors {
   static const credit = Color(0xFF1D7A4F);
 }
 
-const String bodyFont = 'Hind';
-const String headFont = 'Anek';
+const String bodyFont = 'Noto';
+const String headFont = 'Noto';
 
 TextStyle head(double size, {Color color = AppColors.ink, FontWeight weight = FontWeight.w700}) =>
     TextStyle(fontFamily: headFont, fontSize: size, fontWeight: weight, color: color, height: 1.25);

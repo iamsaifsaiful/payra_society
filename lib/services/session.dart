@@ -7,7 +7,7 @@ import '../api/models.dart';
 import 'storage.dart';
 
 /// App version shown to the server's min/latest version check.
-const appVersion = '1.0.0';
+const appVersion = '1.0.1';
 
 /// A site baked in at build time: `flutter build apk --dart-define=PAYRA_SITE=https://...`
 const presetSite = String.fromEnvironment('PAYRA_SITE');
