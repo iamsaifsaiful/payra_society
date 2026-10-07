@@ -98,7 +98,7 @@ class WaCard extends StatelessWidget {
               TextButton(onPressed: () => showWaPreview(context, m, onSend), child: const Text('পুরো বার্তা')),
               const Spacer(),
               FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: waGreen, visualDensity: VisualDensity.compact),
+                style: FilledButton.styleFrom(backgroundColor: waGreen, minimumSize: const Size(110, 42)),
                 onPressed: onSend,
                 icon: const Icon(Icons.send_rounded, size: 18),
                 label: Text(sent ? 'আবার পাঠান' : 'পাঠান'),

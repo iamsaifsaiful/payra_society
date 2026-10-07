@@ -69,6 +69,7 @@ class ProjectDuesScreen extends StatelessWidget {
                         children: [
                           if (p.mobile.isNotEmpty)
                             OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(minimumSize: const Size(90, 42)),
                               onPressed: () => launchUrl(Uri(scheme: 'tel', path: p.mobile)),
                               icon: const Icon(Icons.call_rounded, size: 18),
                               label: const Text('কল'),
@@ -76,7 +77,7 @@ class ProjectDuesScreen extends StatelessWidget {
                           const Spacer(),
                           if (p.whatsapp != null)
                             FilledButton.icon(
-                              style: FilledButton.styleFrom(backgroundColor: waGreen),
+                              style: FilledButton.styleFrom(backgroundColor: waGreen, minimumSize: const Size(120, 42)),
                               onPressed: () => showWaPreview(context, p.whatsapp!, () => sendWa(context, prefs, p.whatsapp!)),
                               icon: const Icon(Icons.chat_rounded, size: 18),
                               label: const Text('গ্রাহককে মনে করান'),
