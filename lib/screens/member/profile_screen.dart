@@ -8,6 +8,7 @@ import '../../services/member_repo.dart';
 import '../../services/session.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/shell_nav.dart';
 import 'receipts_screen.dart';
 import 'society_screen.dart';
 
@@ -20,7 +21,7 @@ class ProfileScreen extends StatelessWidget {
     final s = SessionScope.of(context);
     final u = s.user!;
     return Scaffold(
-      appBar: AppBar(title: const Text('প্রোফাইল')),
+      appBar: AppBar(leading: shellBack(context), title: const Text('প্রোফাইল')),
       body: Loader<MemberProfile>(
         load: repo.profile,
         builder: (context, p, reload) => ListView(

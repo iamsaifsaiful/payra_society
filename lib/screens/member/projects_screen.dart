@@ -5,6 +5,7 @@ import '../../logic/format.dart';
 import '../../services/member_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/shell_nav.dart';
 import '../../widgets/member_widgets.dart';
 
 /// আমার প্রজেক্ট: every project the member has (or had) a share in.
@@ -20,7 +21,7 @@ class ProjectsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('আমার প্রজেক্ট')),
+      appBar: AppBar(leading: shellBack(context), title: const Text('আমার প্রজেক্ট')),
       body: Loader<(List<ProjectStake>, MemberSummary)>(
         load: _load,
         builder: (context, d, _) {

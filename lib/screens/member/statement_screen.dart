@@ -6,6 +6,7 @@ import '../../main.dart';
 import '../../services/member_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/shell_nav.dart';
 import '../../widgets/member_widgets.dart';
 import 'receipts_screen.dart';
 
@@ -82,6 +83,7 @@ class _StatementScreenState extends State<StatementScreen> {
     final offline = SessionScope.of(context).offline;
     return Scaffold(
       appBar: AppBar(
+        leading: shellBack(context),
         title: const Text('লেনদেন'),
         actions: [
           IconButton(

@@ -10,6 +10,11 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../member/receipts_screen.dart';
 import 'pickers.dart';
+import '../../widgets/shell_nav.dart';
+import 'branding_screen.dart';
+import 'collections_screen.dart';
+import 'money_screen.dart';
+import 'share_transfer_screen.dart';
 
 const releaseApkUrl = 'https://github.com/iamsaifsaiful/payra_society/releases/latest/download/payra-society.apk';
 
@@ -25,7 +30,7 @@ class AdminMoreScreen extends StatelessWidget {
     final s = SessionScope.of(context);
     final b = s.branding;
     return Scaffold(
-      appBar: AppBar(title: const Text('আরও')),
+      appBar: AppBar(leading: shellBack(context), title: const Text('আরও')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
@@ -55,6 +60,34 @@ class AdminMoreScreen extends StatelessWidget {
             child: Column(
               children: [
                 ListTile(
+                  leading: const Icon(Icons.notifications_active_rounded, color: AppColors.brand),
+                  title: const Text('আদায় ও বকেয়া'),
+                  subtitle: const Text('কার কত মাস বকেয়া, WhatsApp রিমাইন্ডার'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, CollectionsScreen(repo: repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.swap_horiz_rounded, color: AppColors.brand),
+                  title: const Text('শেয়ার ট্রান্সফার'),
+                  subtitle: const Text('শেয়ার বিক্রি, আগের ট্রান্সফার ও ফেরত'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, ShareTransferScreen(repo: repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_rounded, color: AppColors.brand),
+                  title: const Text('অন্যান্য আয়-ব্যয়'),
+                  subtitle: const Text('আয় ৮০% প্রশাসন / ২০% কল্যাণ; খরচ তহবিল থেকে'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, MoneyScreen(repo: repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.badge_rounded, color: AppColors.brand),
+                  title: const Text('নাম ও লোগো'),
+                  subtitle: const Text('অ্যাপ, রসিদ ও বার্তায় যাবে'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, BrandingScreen(repo: repo)),
+                ),
+                ListTile(
                   leading: const Icon(Icons.receipt_long_rounded, color: AppColors.brand),
                   title: const Text('সব রসিদ'),
                   trailing: const Icon(Icons.chevron_right_rounded),
@@ -63,7 +96,7 @@ class AdminMoreScreen extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.tune_rounded, color: AppColors.brand),
                   title: const Text('অ্যাপ ও সঞ্চয়ের নিয়ম'),
-                  subtitle: const Text('মাসিক অঙ্ক, শেষ তারিখ, কোষাধ্যক্ষের নম্বর, অ্যাপ আপডেট'),
+                  subtitle: const Text('সাধারণ মাসিক অঙ্ক, শেষ তারিখ, কোষাধ্যক্ষ, অ্যাপ আপডেট'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _push(context, _SettingsScreen(repo: repo)),
                 ),
@@ -74,7 +107,7 @@ class AdminMoreScreen extends StatelessWidget {
           const Panel(
             color: AppColors.brandSoft,
             child: Text(
-              'নাম ও লোগো, নতুন প্রজেক্ট, শেয়ার ট্রান্সফার, ব্যাকআপ — এগুলো এখন ওয়েব অ্যাডমিন থেকে করুন। অ্যাপে আসছে পরের ধাপে।',
+              'লাভে ছাড়, পুরনো এন্ট্রি সংশোধন/মুছে ফেলা আর ব্যাকআপ এখনো ওয়েব অ্যাডমিন থেকে করুন।',
               style: TextStyle(height: 1.55, fontSize: 13.5),
             ),
           ),
@@ -255,7 +288,7 @@ class _SettingsFormState extends State<_SettingsForm> {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
       children: [
         const SectionTitle('সঞ্চয়'),
-        _field(_monthly, 'মাসিক সঞ্চয় (৳)', type: TextInputType.number, help: '০ বা খালি রাখলে বকেয়া হিসাব ও রিমাইন্ডার বন্ধ থাকবে।'),
+        _field(_monthly, 'সাধারণ মাসিক সঞ্চয় (৳)', type: TextInputType.number, help: 'যে সদস্যের নিজস্ব অঙ্ক দেওয়া নেই, তাঁর জন্য এটা ধরা হবে। সদস্যভিত্তিক অঙ্ক: সদস্য → তথ্য বদলান।'),
         _field(_dueDay, 'প্রতি মাসের শেষ তারিখ', type: TextInputType.number),
         _field(_days, 'রিমাইন্ডারের দিন (কমা দিয়ে)', help: 'যেমন: 5, 10'),
         _field(_irregular, 'কত মাস বকেয়া হলে অনিয়মিত', type: TextInputType.number),

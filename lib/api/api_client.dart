@@ -80,6 +80,13 @@ class ApiClient {
   Future<dynamic> post(String path, [Map<String, dynamic>? body]) => _send(
       () => _http.post(uri(path), headers: _headers(json: true), body: jsonEncode(body ?? const {})));
 
+  /// PUT sent as POST + X-HTTP-Method-Override, because some shared hosts block PUT.
+  Future<dynamic> put(String path, [Map<String, dynamic>? body]) => _send(() => _http.post(
+        uri(path),
+        headers: {..._headers(json: true), 'X-HTTP-Method-Override': 'PUT'},
+        body: jsonEncode(body ?? const {}),
+      ));
+
   Future<dynamic> _send(Future<http.Response> Function() call) async {
     if (site.isEmpty) throw const ApiException('NO_SITE', 'সমিতির ওয়েবসাইট ঠিক করা নেই।');
     http.Response res;

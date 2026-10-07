@@ -9,15 +9,17 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'entry_success_screen.dart';
 import 'pickers.dart';
+import '../../widgets/shell_nav.dart';
 
 enum EntryKind { saving, installment, withdrawal }
 
 /// ➕ এন্ট্রি: savings, installment or withdrawal. Saved at once (no approval step).
 class EntryScreen extends StatefulWidget {
-  const EntryScreen({super.key, required this.repo, this.initialKind = EntryKind.saving, this.member, this.standalone = false});
+  const EntryScreen({super.key, required this.repo, this.initialKind = EntryKind.saving, this.member, this.project, this.standalone = false});
   final AdminRepo repo;
   final EntryKind initialKind;
   final AdminMember? member;
+  final Project? project;
 
   /// Opened from another screen (has its own back button).
   final bool standalone;
@@ -43,8 +45,12 @@ class _EntryScreenState extends State<EntryScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.member != null) _setMember(widget.member!);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _defaultAmount());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.member != null) _setMember(widget.member!);
+      if (widget.project != null) _setProject(widget.project!);
+      _defaultAmount();
+    });
   }
 
   @override
@@ -218,7 +224,7 @@ class _EntryScreenState extends State<EntryScreen> {
     final b = _balances;
     final pay = _payments;
     return Scaffold(
-      appBar: AppBar(title: const Text('নতুন এন্ট্রি'), automaticallyImplyLeading: widget.standalone),
+      appBar: AppBar(title: const Text('নতুন এন্ট্রি'), leading: widget.standalone ? null : shellBack(context)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [

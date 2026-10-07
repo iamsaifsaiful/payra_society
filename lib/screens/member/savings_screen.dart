@@ -6,6 +6,7 @@ import '../../main.dart';
 import '../../services/member_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/shell_nav.dart';
 import '../../widgets/member_widgets.dart';
 
 class _SavingsData {
@@ -29,7 +30,7 @@ class SavingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cfg = SessionScope.of(context).config;
     return Scaffold(
-      appBar: AppBar(title: const Text('সঞ্চয়')),
+      appBar: AppBar(leading: shellBack(context), title: const Text('সঞ্চয়')),
       body: Loader<_SavingsData>(
         load: _load,
         builder: (context, d, _) {

@@ -13,7 +13,10 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/member_widgets.dart';
 import '../member/home_screen.dart' show ArrearsCard;
+import '../../services/admin_more.dart';
+import '../../widgets/shell_nav.dart';
 import 'entry_screen.dart';
+import 'member_form_screen.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({super.key, required this.repo});
@@ -37,7 +40,17 @@ class _MembersScreenState extends State<MembersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('সদস্য')),
+      appBar: AppBar(leading: shellBack(context), title: const Text('সদস্য')),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.brand,
+        foregroundColor: Colors.white,
+        onPressed: () async {
+          final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => MemberFormScreen(repo: widget.repo)));
+          if (ok == true) _loader.currentState?.reload();
+        },
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: const Text('নতুন সদস্য'),
+      ),
       body: Column(
         children: [
           Padding(
@@ -61,16 +74,19 @@ class _MembersScreenState extends State<MembersScreen> {
                       Text('কাউকে পাওয়া যায়নি।', textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted)),
                     ])
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                       itemCount: items.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, i) {
                         final m = items[i];
                         return Panel(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(builder: (_) => MemberDetailScreen(repo: widget.repo, memberId: m.id)),
-                          ),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(builder: (_) => MemberDetailScreen(repo: widget.repo, memberId: m.id)),
+                            );
+                            _loader.currentState?.reload();
+                          },
                           child: Row(
                             children: [
                               Avatar(text: initials(m.name), size: 44),
@@ -116,13 +132,22 @@ class _Detail {
   final Balances balances;
   final Arrears arrears;
   final List<StatementRow> rows;
-  const _Detail(this.member, this.balances, this.arrears, this.rows);
+  final MemberForm form;
+  const _Detail(this.member, this.balances, this.arrears, this.rows, this.form);
 }
 
-class MemberDetailScreen extends StatelessWidget {
+class MemberDetailScreen extends StatefulWidget {
   const MemberDetailScreen({super.key, required this.repo, required this.memberId});
   final AdminRepo repo;
   final int memberId;
+  @override
+  State<MemberDetailScreen> createState() => _MemberDetailScreenState();
+}
+
+class _MemberDetailScreenState extends State<MemberDetailScreen> {
+  AdminRepo get repo => widget.repo;
+  int get memberId => widget.memberId;
+  final loader = GlobalKey<LoaderState<_Detail>>();
 
   Future<_Detail> _load() async {
     final r = await Future.wait([
@@ -130,8 +155,9 @@ class MemberDetailScreen extends StatelessWidget {
       repo.balance(memberId),
       repo.arrears(memberId),
       repo.statement(memberId),
+      repo.memberForm(memberId),
     ]);
-    return _Detail(r[0] as AdminMember, r[1] as Balances, r[2] as Arrears, r[3] as List<StatementRow>);
+    return _Detail(r[0] as AdminMember, r[1] as Balances, r[2] as Arrears, r[3] as List<StatementRow>, r[4] as MemberForm);
   }
 
   String _wa(String mobile) {
@@ -199,8 +225,23 @@ class MemberDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cfg = SessionScope.of(context).config;
     return Scaffold(
-      appBar: AppBar(title: const Text('সদস্যের হিসাব')),
+      appBar: AppBar(
+        title: const Text('সদস্যের হিসাব'),
+        actions: [
+          IconButton(
+            tooltip: 'তথ্য বদলান',
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () async {
+              final ok = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(builder: (_) => MemberFormScreen(repo: repo, memberId: memberId)),
+              );
+              if (ok == true) loader.currentState?.reload();
+            },
+          ),
+        ],
+      ),
       body: Loader<_Detail>(
+        key: loader,
         load: _load,
         builder: (context, d, reload) {
           final m = d.member;
@@ -271,6 +312,24 @@ class MemberDetailScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(child: StatTile(label: 'লাভ', value: taka(d.balances.profits))),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.savings_rounded, color: AppColors.brand),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        d.form.monthlySaving != null
+                            ? 'মাসিক সঞ্চয় ${taka(d.form.monthlySaving)} (এই সদস্যের নিজস্ব)'
+                            : (d.form.effectiveMonthly > 0 ? 'মাসিক সঞ্চয় ${taka(d.form.effectiveMonthly)} (সমিতির সাধারণ অঙ্ক)' : 'মাসিক সঞ্চয় ঠিক করা নেই'),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               ArrearsCard(arrears: d.arrears, dueDay: cfg?.dueDay ?? 10),
