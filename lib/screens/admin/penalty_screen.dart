@@ -105,31 +105,8 @@ class _PenaltyBodyState extends State<_PenaltyBody> {
       }
       return;
     }
-    final note = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('জরিমানা মওকুফ'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(bn('${p.name} · ${monthBn(p.month)} · ${taka(p.amount)}'), style: const TextStyle(height: 1.5)),
-            const SizedBox(height: 4),
-            const Text('টাকা সদস্যের লভ্যাংশে ফেরত যাবে, সদস্য নোটিফিকেশন পাবেন।', style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.5)),
-            const SizedBox(height: 10),
-            TextField(controller: note, decoration: const InputDecoration(labelText: 'কারণ (ঐচ্ছিক)')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
-          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('মওকুফ করুন')),
-        ],
-      ),
-    );
-    final text = note.text.trim();
-    note.dispose();
-    if (ok != true) return;
+    final text = await showDialog<String>(context: context, builder: (_) => _WaiveDialog(p: p));
+    if (text == null) return;
     try {
       await widget.repo.waivePenalty(p.id, text);
       if (mounted) toast(context, 'মওকুফ হয়েছে');
@@ -255,4 +232,45 @@ class _Stat extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// Owns its text controller, so it lives exactly as long as the dialog.
+class _WaiveDialog extends StatefulWidget {
+  const _WaiveDialog({required this.p});
+  final Penalty p;
+  @override
+  State<_WaiveDialog> createState() => _WaiveDialogState();
+}
+
+class _WaiveDialogState extends State<_WaiveDialog> {
+  final _note = TextEditingController();
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.p;
+    return AlertDialog(
+      title: const Text('জরিমানা মওকুফ'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(bn('${p.name} · ${monthBn(p.month)} · ${taka(p.amount)}'), style: const TextStyle(height: 1.5)),
+          const SizedBox(height: 4),
+          const Text('টাকা সদস্যের লভ্যাংশে ফেরত যাবে, সদস্য নোটিফিকেশন পাবেন।', style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.5)),
+          const SizedBox(height: 10),
+          TextField(controller: _note, decoration: const InputDecoration(labelText: 'কারণ (ঐচ্ছিক)')),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
+        FilledButton(onPressed: () => Navigator.pop(context, _note.text.trim()), child: const Text('মওকুফ করুন')),
+      ],
+    );
+  }
 }
