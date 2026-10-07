@@ -51,12 +51,12 @@ jobs:
           SITE: ${{ github.event.inputs.site }}
         run: |
           set -o pipefail
-          flutter build apk --release --dart-define=PAYRA_SITE="$SITE" 2>&1 | tee build.log || { bash tool/annotate_failures.sh build.log "Build failed"; exit 1; }
+          flutter build apk --release --split-per-abi --dart-define=PAYRA_SITE="$SITE" 2>&1 | tee build.log || { bash tool/annotate_failures.sh build.log "Build failed"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
           name: payra-society-android
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/*-release.apk
 
       # Every build on main becomes a release, so the newest APK is always at
       # https://github.com/iamsaifsaiful/payra_society/releases/latest/download/payra-society.apk
@@ -67,9 +67,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SITE: ${{ github.event.inputs.site }}
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk payra-society.apk
+          # Almost every phone from the last 7 years is arm64; older 32-bit phones use the armv7 file.
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk payra-society.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk payra-society-armv7.apk
           VERSION=$(grep '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')
           TAG="v${VERSION}-build.${{ github.run_number }}"
-          NOTE="পায়রা সমিতি অ্যাপ ${VERSION} (build ${{ github.run_number }}) · commit ${GITHUB_SHA::7}"
+          NOTE="পায়রা সমিতি অ্যাপ ${VERSION} (build ${{ github.run_number }}) · commit ${GITHUB_SHA::7}. বেশিরভাগ ফোনে payra-society.apk; খুব পুরনো ফোনে ইনস্টল না হলে payra-society-armv7.apk।"
           if [ -n "$SITE" ]; then NOTE="$NOTE · ওয়েবসাইট বসানো: $SITE"; fi
-          gh release create "$TAG" payra-society.apk --title "পায়রা সমিতি $VERSION (build ${{ github.run_number }})" --notes "$NOTE" --latest
+          gh release create "$TAG" payra-society.apk payra-society-armv7.apk --title "পায়রা সমিতি $VERSION (build ${{ github.run_number }})" --notes "$NOTE" --latest
