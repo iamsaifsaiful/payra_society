@@ -1,0 +1,39 @@
+name: payra_society
+description: পায়রা সমিতির সদস্য ও অ্যাডমিন অ্যাপ — সঞ্চয়, বিনিয়োগ, লাভ ও রসিদ (Payra Enterprise Society Accounts প্লাগিনের API দিয়ে চলে)।
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^9.2.2
+  http: ^1.2.2
+  shared_preferences: ^2.3.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Hind
+      fonts:
+        - asset: assets/fonts/HindSiliguri-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HindSiliguri-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HindSiliguri-SemiBold.ttf
+          weight: 600
+    - family: Anek
+      fonts:
+        - asset: assets/fonts/AnekBangla-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/AnekBangla-Bold.ttf
+          weight: 700
