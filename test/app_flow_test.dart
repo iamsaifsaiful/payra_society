@@ -78,17 +78,16 @@ Future<Session> _session(Map<String, Object> prefs) async {
 }
 
 void main() {
-  testWidgets('setup → login → member home shows balances', (tester) async {
+  testWidgets('first run opens login for payrasociety.com → member home shows balances', (tester) async {
     await tester.binding.setSurfaceSize(const Size(420, 1600));
-    final s = await _session({});
+    final s = await _session({'site': 'https://old-typed-site.test'});
     await tester.pumpWidget(PayraApp(session: s));
     await s.load();
     await tester.pumpAndSettle();
-    expect(s.stage, SessionStage.needSite);
-
-    await tester.enterText(find.byType(TextField), 'payra.test');
-    await tester.tap(find.text('সংযোগ করুন'));
-    await tester.pumpAndSettle();
+    // No website screen: the society's site is built in and replaces anything typed before.
+    expect(s.stage, SessionStage.needLogin);
+    expect(s.api.site, 'https://payrasociety.com');
+    expect(find.text('অন্য ওয়েবসাইট'), findsNothing);
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.text('পায়রা এন্টারপ্রাইজ সমিতি'), findsOneWidget);
 

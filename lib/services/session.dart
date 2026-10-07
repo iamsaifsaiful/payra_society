@@ -7,10 +7,11 @@ import '../api/models.dart';
 import 'storage.dart';
 
 /// App version shown to the server's min/latest version check.
-const appVersion = '1.2.0';
+const appVersion = '1.2.1';
 
-/// A site baked in at build time: `flutter build apk --dart-define=PAYRA_SITE=https://...`
-const presetSite = String.fromEnvironment('PAYRA_SITE');
+/// The society's website, built into the app so nobody has to type it.
+/// Another society can build with `--dart-define=PAYRA_SITE=https://...`.
+const presetSite = String.fromEnvironment('PAYRA_SITE', defaultValue: 'https://payrasociety.com');
 
 enum SessionStage { loading, needSite, needLogin, ready }
 
@@ -54,13 +55,24 @@ class Session extends ChangeNotifier {
 
   Future<void> load() async {
     textScale = prefs.getDouble('ui.textScale') ?? 1.0;
-    final site = prefs.getString('site') ?? '';
-    final cfg = prefs.getString('config');
+    var site = prefs.getString('site') ?? '';
+    var cfg = prefs.getString('config');
     if (site.isEmpty && presetSite.isEmpty) {
       _go(SessionStage.needSite);
       return;
     }
-    api.site = site.isEmpty ? ApiClient.normalizeSite(presetSite) : site;
+    if (presetSite.isNotEmpty) {
+      // The built-in site always wins over an address typed in an older version.
+      final preset = ApiClient.normalizeSite(presetSite);
+      if (site != preset) {
+        await prefs.setString('site', preset);
+        await prefs.remove('queryStyle');
+        await prefs.remove('config');
+        cfg = null;
+        site = preset;
+      }
+    }
+    api.site = site;
     api.queryStyle = prefs.getBool('queryStyle') ?? false;
     if (cfg != null) config = AppConfig.fromJson(jsonDecode(cfg));
     final tok = await tokens.read();
@@ -126,11 +138,28 @@ class Session extends ChangeNotifier {
   }
 
   Future<void> login(String identifier, String password) async {
-    final data = await api.post('/auth/login', {
+    final body = {
       'identifier': identifier.trim(),
       'password': password,
       'device': 'Payra App $appVersion (Android)',
-    });
+    };
+    dynamic data;
+    try {
+      data = await api.post('/auth/login', body);
+    } on ApiException catch (e) {
+      // Sites without pretty permalinks only answer on ?rest_route=. Switch once and retry.
+      final wrongRoute = e.code == 'rest_no_route' || (e.code == 'BAD_RESPONSE' && e.status == 404);
+      if (!wrongRoute) rethrow;
+      api.queryStyle = !api.queryStyle;
+      try {
+        data = await api.post('/auth/login', body);
+        await prefs.setBool('queryStyle', api.queryStyle);
+        refreshConfig();
+      } on ApiException {
+        api.queryStyle = !api.queryStyle;
+        rethrow;
+      }
+    }
     final m = data as Map;
     final tok = (m['accessToken'] ?? '').toString();
     if (tok.isEmpty) throw const ApiException('BAD_RESPONSE', 'লগইন টোকেন পাওয়া যায়নি।');

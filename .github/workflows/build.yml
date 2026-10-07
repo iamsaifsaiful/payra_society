@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       site:
-        description: 'সমিতির ওয়েবসাইট (খালি রাখলে অ্যাপ প্রথমবার জিজ্ঞেস করবে)'
+        description: 'অন্য সমিতির ওয়েবসাইট (খালি রাখলে payrasociety.com)'
         required: false
         default: ''
 
@@ -51,7 +51,8 @@ jobs:
           SITE: ${{ github.event.inputs.site }}
         run: |
           set -o pipefail
-          flutter build apk --release --split-per-abi --dart-define=PAYRA_SITE="$SITE" 2>&1 | tee build.log || { bash tool/annotate_failures.sh build.log "Build failed"; exit 1; }
+          DEFINE=""; if [ -n "$SITE" ]; then DEFINE="--dart-define=PAYRA_SITE=$SITE"; fi
+          flutter build apk --release --split-per-abi $DEFINE 2>&1 | tee build.log || { bash tool/annotate_failures.sh build.log "Build failed"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
