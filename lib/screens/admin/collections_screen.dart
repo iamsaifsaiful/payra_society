@@ -4,8 +4,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../logic/format.dart';
 import '../../main.dart';
 import '../../services/admin_repo.dart';
+import '../../services/whatsapp.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/wa_list.dart';
 import 'members_screen.dart';
 
 /// আদায়: members behind on savings, with one-tap WhatsApp reminders.
@@ -20,18 +22,17 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
   int _min = 1;
   final _loader = GlobalKey<LoaderState<(List<Defaulter>, bool)>>();
 
-  String _wa(String mobile) {
-    var d = mobile.replaceAll(RegExp(r'\D'), '');
-    if (d.startsWith('0') && d.length == 11) d = '88$d';
-    return d;
-  }
-
   void _remind(Defaulter x) {
     final s = SessionScope.read(context);
+    final w = x.whatsapp;
+    if (w != null && w.text.isNotEmpty) {
+      showWaPreview(context, w, () => sendWa(context, s.prefs, w));
+      return;
+    }
     final name = s.branding.name;
     final msg = bn('$name\n${x.name}, আপনার ${x.monthsDue} মাসের সঞ্চয় (${taka(x.amountDue)}) বকেয়া আছে। '
         'প্রতি মাসের ${s.config?.dueDay ?? 10} তারিখের মধ্যে জমা দিন। ধন্যবাদ।');
-    launchUrl(Uri.parse('https://wa.me/${_wa(x.mobile)}?text=${Uri.encodeComponent(msg)}'), mode: LaunchMode.externalApplication);
+    WhatsApp.send(s.prefs, phone: x.mobile, text: msg);
   }
 
   @override
@@ -132,6 +133,8 @@ class _CollectionsScreenState extends State<CollectionsScreen> {
                                     bn('${x.memberUid} · ${x.monthsDue} মাস · ${taka(x.amountDue)}'),
                                     style: TextStyle(fontSize: 13, color: x.irregular ? AppColors.danger : AppColors.muted),
                                   ),
+                                  if (x.dueMonthsText.isNotEmpty)
+                                    Text(x.dueMonthsText, style: const TextStyle(fontSize: 12, color: AppColors.muted, height: 1.35)),
                                 ],
                               ),
                             ),

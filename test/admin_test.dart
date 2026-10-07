@@ -7,7 +7,9 @@ import 'package:http/testing.dart';
 import 'package:payra_society/api/api_client.dart';
 import 'package:payra_society/main.dart';
 import 'package:payra_society/screens/admin/admin_shell.dart';
+import 'package:payra_society/screens/admin/entries_screen.dart';
 import 'package:payra_society/screens/admin/penalty_screen.dart';
+import 'package:payra_society/services/whatsapp.dart';
 import 'package:payra_society/screens/admin/pickers.dart';
 import 'package:payra_society/services/admin_more.dart';
 import 'package:payra_society/services/admin_repo.dart';
@@ -22,6 +24,7 @@ http.Response _res(Object body, [int status = 200]) => http.Response.bytes(
     );
 
 Map<String, dynamic>? lastSaving;
+Map<String, dynamic>? lastEntryEdit;
 Map<String, dynamic>? lastPenaltySettings;
 String? lastWaive;
 bool penaltyOn = false;
@@ -118,7 +121,26 @@ http.Response _route(http.Request r) {
           'details': {'before': {'total': 17215.63}, 'after': {'total': 22215.63}},
         },
         'whatsappLink': 'https://wa.me/8801712000001?text=x',
+        'whatsapp': [
+          {'to': '8801712000001', 'name': 'রফিকুল ইসলাম', 'kind': 'member', 'label': 'সদস্যকে রসিদ', 'text': '*পায়রা সমিতি*\nসঞ্চয় জমা: ৳৫,০০০\nমোট ব্যালেন্স: ৳২২,২১৫.৬৩'},
+        ],
       }), 201);
+    case 'GET /entries/saving':
+      return _res(ok({
+        'items': [
+          {'id': 9, 'type': 'saving', 'date': '2026-10-07', 'amount': 5000, 'method': 'bkash', 'uid': 'PSM1001', 'name': 'রফিকুল ইসলাম'},
+        ],
+        'total': 1,
+        'sum': 5000,
+      }));
+    case 'POST /entries/saving/9':
+      lastEntryEdit = Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+      return _res(ok({
+        'entry': {'id': 9, 'type': 'saving', 'amount': 6000},
+        'whatsapp': [
+          {'to': '8801712000001', 'name': 'রফিকুল ইসলাম', 'kind': 'member', 'label': 'সদস্যকে সংশোধনী', 'text': 'এন্ট্রি সংশোধন: ৳৫,০০০ → ৳৬,০০০'},
+        ],
+      }));
   }
   return _res({'code': 'rest_no_route', 'message': 'No route'}, 404);
 }
@@ -201,7 +223,9 @@ void main() {
     expect(lastSaving?['amount'], 5000);
     expect(find.text('সঞ্চয় জমা হয়েছে'), findsOneWidget);
     expect(find.text('৳ ২২,২১৫.৬৩'), findsOneWidget);
-    expect(find.text('WhatsApp-এ রসিদ পাঠান'), findsOneWidget);
+    expect(find.text('WhatsApp-এ হিসাব পাঠান'), findsOneWidget);
+    expect(find.text('সদস্যকে রসিদ · ০১৭১২০০০০০১'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'পাঠান'), findsOneWidget);
 
     // Back from the success screen, then the tab's back arrow returns to the dashboard.
     await tester.tap(find.text('ঠিক আছে'));
@@ -234,6 +258,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(lastPenaltySettings?['penalty_enabled'], true);
     expect(lastPenaltySettings?['penalty_rate'], 2);
+    expect(lastPenaltySettings?['penalty_base'], 'monthly');
     expect(lastPenaltySettings!.containsKey('monthly_saving'), isFalse); // other settings untouched
     expect(find.text('জরিমানা চালু আছে'), findsOneWidget);
 
@@ -245,5 +270,46 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'মওকুফ করুন'));
     await tester.pumpAndSettle();
     expect(lastWaive, 'অসুস্থ ছিলেন');
+  });
+
+  test('WhatsApp numbers and messages', () {
+    expect(waDigits('01712-000001'), '8801712000001');
+    expect(waDigits('+8801712000001'), '8801712000001');
+    final list = WaMessage.listOf([
+      {'to': '8801712000001', 'name': 'ক', 'kind': 'customer', 'label': 'গ্রাহককে রসিদ', 'text': 'x'},
+      {'to': '', 'text': ''},
+    ]);
+    expect(list, hasLength(1));
+    expect(list.single.kind, 'customer');
+  });
+
+  testWidgets('admin corrects a saving with the PIN and gets the WhatsApp notice', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(420, 1800));
+    SharedPreferences.setMockInitialValues({'site': 'https://payra.test'});
+    final s = Session(
+      api: ApiClient(client: MockClient((r) async => _route(r))),
+      prefs: await Prefs.open(),
+      tokens: MemoryTokenStore(),
+    );
+    await s.load();
+    await s.login('admin', 'x');
+    await tester.pumpWidget(MaterialApp(home: EntriesScreen(repo: AdminRepo(s))));
+    await tester.pumpAndSettle();
+    expect(find.text('রফিকুল ইসলাম'), findsOneWidget);
+    await tester.tap(find.text('রফিকুল ইসলাম'));
+    await tester.pumpAndSettle();
+    expect(find.text('সঞ্চয় সংশোধন'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, '5000'), '6000');
+    await tester.tap(find.text('সংশোধন সংরক্ষণ'));
+    await tester.pumpAndSettle();
+    expect(find.text('সংশোধন নিশ্চিত করতে পিন দিন।'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'পিন'), '4321');
+    await tester.tap(find.text('নিশ্চিত'));
+    await tester.pumpAndSettle();
+    expect(lastEntryEdit?['amount'], 6000);
+    expect(lastEntryEdit?['pin'], '4321');
+    expect(lastEntryEdit?['date'], '2026-10-07');
+    expect(find.text('সংশোধনের খবর WhatsApp-এ জানান'), findsOneWidget);
+    expect(find.text('সদস্যকে সংশোধনী · ০১৭১২০০০০০১'), findsOneWidget);
   });
 }

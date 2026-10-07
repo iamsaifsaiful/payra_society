@@ -4,7 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../logic/format.dart';
 import '../../services/admin_repo.dart';
 import '../../theme.dart';
+import '../../main.dart';
 import '../../widgets/common.dart';
+import '../../widgets/wa_list.dart';
 import '../member/receipts_screen.dart';
 import 'entry_screen.dart';
 
@@ -72,18 +74,15 @@ class EntrySuccessScreen extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 18),
-          if (result.whatsappLink.isNotEmpty) ...[
+          if (result.whatsapp.isNotEmpty) ...[
+            WaList(prefs: SessionScope.of(context).prefs, messages: result.whatsapp, title: 'WhatsApp-এ হিসাব পাঠান'),
+            const SizedBox(height: 4),
+          ] else if (result.whatsappLink.isNotEmpty) ...[
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1FA855)),
+              style: FilledButton.styleFrom(backgroundColor: waGreen),
               onPressed: () => launchUrl(Uri.parse(result.whatsappLink), mode: LaunchMode.externalApplication),
               icon: const Icon(Icons.chat_rounded),
               label: const Text('WhatsApp-এ রসিদ পাঠান'),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'WhatsApp খুলবে, বার্তা লেখা থাকবে — শুধু Send চাপুন।',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
             ),
             const SizedBox(height: 12),
           ],

@@ -31,7 +31,7 @@ class AppConfig {
   final String minAppVersion, latestAppVersion, apkUrl, treasurerPhone;
   final bool penaltyEnabled;
   final double penaltyRate;
-  final String penaltySince;
+  final String penaltySince, penaltyBase, rulesUpdatedAt;
 
   const AppConfig({
     required this.apiVersion,
@@ -47,6 +47,8 @@ class AppConfig {
     this.penaltyEnabled = false,
     this.penaltyRate = 0,
     this.penaltySince = '',
+    this.penaltyBase = 'monthly',
+    this.rulesUpdatedAt = '',
   });
 
   factory AppConfig.fromJson(Object? j) {
@@ -67,6 +69,8 @@ class AppConfig {
       penaltyEnabled: _map(m['penalty'])['enabled'] == true,
       penaltyRate: toNum(_map(m['penalty'])['rate']),
       penaltySince: _str(_map(m['penalty'])['since']),
+      penaltyBase: _str(_map(m['penalty'])['base']).isEmpty ? 'monthly' : _str(_map(m['penalty'])['base']),
+      rulesUpdatedAt: _str(m['rulesUpdatedAt']),
     );
   }
 }
@@ -212,7 +216,9 @@ class StatementRow {
     if (type == 'distribution') {
       parts.add('মূলধন ${taka(capital)} + লাভ ${taka(profit)}');
     } else if (type == 'penalty') {
-      parts.add('লভ্যাংশ ${taka(base)}-এর ${bn(_rate(rate))}% · প্রশাসনিক তহবিলে');
+      // The server's note says what the rate was taken of (monthly installment, savings, or profit).
+      final i = note.indexOf(' · ');
+      parts.add(i > 0 ? note.substring(i + 3) : 'লভ্যাংশ ${taka(base)}-এর ${bn(_rate(rate))}% · প্রশাসনিক তহবিলে');
     } else if (method.isNotEmpty) {
       parts.add(methodBn(method));
     }
@@ -429,5 +435,15 @@ class MemberProfile {
       status: _str(m['status']),
       nomineeName: _str(m['nominee_name']),
     );
+  }
+}
+
+/// সমিতির নিয়মাবলি, set by the admin.
+class Rules {
+  final String text, updatedAt, updatedBy;
+  const Rules({this.text = '', this.updatedAt = '', this.updatedBy = ''});
+  factory Rules.fromJson(Object? j) {
+    final m = _map(j);
+    return Rules(text: _str(m['text']), updatedAt: _str(m['updatedAt']), updatedBy: _str(m['updatedBy']));
   }
 }

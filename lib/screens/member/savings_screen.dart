@@ -72,7 +72,7 @@ class SavingsScreen extends StatelessWidget {
                       if (cfg?.penaltyEnabled == true) ...[
                         const SizedBox(height: 8),
                         Text(
-                          'মনে রাখবেন: কোনো মাসে সঞ্চয় না দিলে মাস শেষে লভ্যাংশ থেকে ${bn(cfg!.penaltyRate.toStringAsFixed(cfg.penaltyRate == cfg.penaltyRate.roundToDouble() ? 0 : 2))}% জরিমানা কাটা হয়।',
+                          'মনে রাখবেন: কোনো মাসে সঞ্চয় না দিলে মাস শেষে ${cfg!.penaltyBase == 'savings' ? 'মোট সঞ্চয়ের' : 'মাসিক কিস্তির'} ${bn(cfg.penaltyRate.toStringAsFixed(cfg.penaltyRate == cfg.penaltyRate.roundToDouble() ? 0 : 2))}% জরিমানা লভ্যাংশ থেকে কাটা হয়। অগ্রিম দিলে জরিমানা নেই।',
                           style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5, fontWeight: FontWeight.w600),
                         ),
                       ],

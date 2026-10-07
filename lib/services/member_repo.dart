@@ -149,6 +149,8 @@ class MemberRepo {
     return (d as List? ?? const []).map(Investment.fromJson).toList();
   }
 
+  Future<Rules> rules() async => Rules.fromJson(await session.cachedGet('/rules'));
+
   Future<Arrears> arrears() async {
     try {
       return Arrears.fromJson(await session.cachedGet('/member/arrears'));

@@ -16,6 +16,11 @@ import 'branding_screen.dart';
 import 'collections_screen.dart';
 import 'money_screen.dart';
 import 'penalty_screen.dart';
+import 'entries_screen.dart';
+import 'project_dues_screen.dart';
+import '../rules_screen.dart';
+import '../../services/whatsapp.dart';
+import '../../widgets/wa_list.dart';
 import 'share_transfer_screen.dart';
 
 const releaseApkUrl = 'https://github.com/iamsaifsaiful/payra_society/releases/latest/download/payra-society.apk';
@@ -26,6 +31,41 @@ class AdminMoreScreen extends StatelessWidget {
   final AdminRepo repo;
 
   void _push(BuildContext context, Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+
+  Future<void> _pickWhatsApp(BuildContext context) async {
+    final s = SessionScope.read(context);
+    final installed = await WhatsApp.installed();
+    if (!context.mounted) return;
+    final current = WhatsApp.app(s.prefs);
+    final pick = await showModalBottomSheet<WaApp>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('রসিদ, হিসাব ও রিমাইন্ডার এই WhatsApp খুলে পাঠানো হবে। আপনি শুধু Send চাপবেন।', style: TextStyle(color: AppColors.muted, height: 1.5)),
+            ),
+            for (final a in WaApp.values)
+              ListTile(
+                leading: Icon(a == current ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, color: AppColors.brand),
+                title: Text(a.label),
+                subtitle: installed.isEmpty ? null : Text(installed.contains(a) ? 'এই ফোনে আছে' : 'এই ফোনে নেই'),
+                onTap: () => Navigator.pop(c, a),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (pick == null) return;
+    await WhatsApp.setApp(s.prefs, pick);
+    if (context.mounted) {
+      toast(context, '${pick.label} দিয়ে পাঠানো হবে');
+      (context as Element).markNeedsBuild();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +116,34 @@ class AdminMoreScreen extends StatelessWidget {
                   onTap: () => _push(context, CollectionsScreen(repo: repo)),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.list_alt_rounded, color: AppColors.brand),
+                  title: const Text('সব এন্ট্রি ও সংশোধন'),
+                  subtitle: const Text('সঞ্চয়, উত্তোলন, কিস্তি, আয়-ব্যয় — পিন দিয়ে বদলান বা বাতিল'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, EntriesScreen(repo: repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event_busy_rounded, color: AppColors.brand),
+                  title: const Text('কিস্তি বকেয়া প্রজেক্ট'),
+                  subtitle: const Text('কোন মাসের কিস্তি বাকি, গ্রাহককে WhatsApp'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, ProjectDuesScreen(repo: repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.menu_book_rounded, color: AppColors.brand),
+                  title: const Text('সমিতির নিয়মাবলি'),
+                  subtitle: Text((s.config?.rulesUpdatedAt ?? '').isEmpty ? 'লিখুন — সদস্যরা অ্যাপে দেখবেন' : bn('হালনাগাদ ${dateBn(s.config!.rulesUpdatedAt)}')),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, adminRulesScreen(repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.chat_rounded, color: waGreen),
+                  title: const Text('কোন WhatsApp দিয়ে পাঠাবেন'),
+                  subtitle: Text(WhatsApp.app(s.prefs).label),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _pickWhatsApp(context),
+                ),
+                ListTile(
                   leading: const Icon(Icons.gavel_rounded, color: AppColors.brand),
                   title: const Text('সঞ্চয় জরিমানা'),
                   subtitle: Text(s.config?.penaltyEnabled == true ? 'চালু · মাস শেষে লভ্যাংশ থেকে' : 'বন্ধ · চালু করুন, হার, মওকুফ'),
@@ -123,7 +191,7 @@ class AdminMoreScreen extends StatelessWidget {
           const Panel(
             color: AppColors.brandSoft,
             child: Text(
-              'লাভে ছাড়, পুরনো এন্ট্রি সংশোধন/মুছে ফেলা আর ব্যাকআপ এখনো ওয়েব অ্যাডমিন থেকে করুন।',
+              'লাভে ছাড় আর ব্যাকআপ এখনো ওয়েব অ্যাডমিন থেকে করুন।',
               style: TextStyle(height: 1.55, fontSize: 13.5),
             ),
           ),

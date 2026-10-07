@@ -243,7 +243,7 @@ double parseAmount(String s) {
 }
 
 /// Asks for the admin PIN (needed for withdrawals). Never stored.
-Future<String?> askPin(BuildContext context) {
+Future<String?> askPin(BuildContext context, {String reason = 'উত্তোলন নিশ্চিত করতে পিন দিন।'}) {
   final c = TextEditingController();
   return showDialog<String>(
     context: context,
@@ -253,7 +253,7 @@ Future<String?> askPin(BuildContext context) {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('উত্তোলন নিশ্চিত করতে পিন দিন।', style: TextStyle(color: AppColors.muted)),
+          Text(reason, style: const TextStyle(color: AppColors.muted)),
           const SizedBox(height: 12),
           TextField(
             controller: c,

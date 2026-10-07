@@ -7,6 +7,7 @@ import '../../services/admin_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'collections_screen.dart';
+import 'project_dues_screen.dart';
 import 'entry_screen.dart';
 import 'members_screen.dart';
 import 'projects_admin_screen.dart';
@@ -130,6 +131,36 @@ class AdminDashboard extends StatelessWidget {
                           ),
                         ),
                         const Icon(Icons.chevron_right_rounded, color: AppColors.danger),
+                      ],
+                    ),
+                  ),
+                ),
+              if (o.overdueProjects.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Panel(
+                    color: const Color(0xFFFFF4E0),
+                    onTap: () => _push(context, ProjectDuesScreen(repo: repo, initial: o.overdueProjects)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event_busy_rounded, color: Color(0xFFB26A00)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                bn('${o.overdueProjects.length}টি প্রজেক্টের কিস্তি বকেয়া · ${taka(o.overdueProjects.fold<double>(0, (a, p) => a + p.behind))}'),
+                                style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF8A5200)),
+                              ),
+                              Text(
+                                o.overdueProjects.take(3).map((p) => '${p.code} (${bn('${p.missedMonths}')} মাস)').join(', '),
+                                style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A5200)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF8A5200)),
                       ],
                     ),
                   ),

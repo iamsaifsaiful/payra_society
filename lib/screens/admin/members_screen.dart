@@ -16,6 +16,9 @@ import '../member/home_screen.dart' show ArrearsCard;
 import '../../services/admin_more.dart';
 import '../../widgets/shell_nav.dart';
 import '../../widgets/statement_export.dart';
+import '../../widgets/wa_list.dart';
+import '../../services/whatsapp.dart';
+import 'entries_screen.dart';
 import 'entry_screen.dart';
 import 'member_form_screen.dart';
 
@@ -135,6 +138,11 @@ class _Detail {
   final List<StatementRow> rows;
   final MemberForm form;
   const _Detail(this.member, this.balances, this.arrears, this.rows, this.form);
+
+  Iterable<StatementRow> get _savings => rows.where((r) => r.type == 'saving');
+  double get totalSaved => _savings.fold(0, (a, r) => a + r.credit);
+  int get savingCount => _savings.length;
+  double get savingWithdrawn => rows.where((r) => r.type == 'withdrawal' && r.withdrawType != 'profits').fold(0, (a, r) => a + r.debit);
 }
 
 class MemberDetailScreen extends StatefulWidget {
@@ -159,12 +167,6 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       repo.memberForm(memberId),
     ]);
     return _Detail(r[0] as AdminMember, r[1] as Balances, r[2] as Arrears, r[3] as List<StatementRow>, r[4] as MemberForm);
-  }
-
-  String _wa(String mobile) {
-    var d = mobile.replaceAll(RegExp(r'\D'), '');
-    if (d.startsWith('0') && d.length == 11) d = '88$d';
-    return d;
   }
 
   Future<void> _reset(BuildContext context, AdminMember m) async {
@@ -217,6 +219,49 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
           ],
         ),
       );
+    } on ApiException catch (e) {
+      if (context.mounted) toast(context, e.message);
+    }
+  }
+
+  Future<void> _whatsapp(BuildContext context, AdminMember m) async {
+    final prefs = SessionScope.read(context).prefs;
+    final pick = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.account_balance_rounded, color: waGreen),
+              title: const Text('হিসাবের সারসংক্ষেপ পাঠান'),
+              subtitle: const Text('সঞ্চয়, বিনিয়োগ, লভ্যাংশ, মোট ব্যালেন্স, বকেয়া মাস'),
+              onTap: () => Navigator.pop(c, 'summary'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_active_rounded, color: waGreen),
+              title: const Text('বকেয়ার রিমাইন্ডার পাঠান'),
+              subtitle: const Text('কোন কোন মাস বাকি তা লেখা থাকবে'),
+              onTap: () => Navigator.pop(c, 'arrears'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_rounded, color: waGreen),
+              title: const Text('শুধু চ্যাট খুলুন'),
+              onTap: () => Navigator.pop(c, 'chat'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (pick == null || !context.mounted) return;
+    if (pick == 'chat') {
+      await WhatsApp.send(prefs, phone: m.mobile, text: '');
+      return;
+    }
+    try {
+      final w = await repo.memberWhatsapp(m.id, arrears: pick == 'arrears');
+      if (context.mounted) await showWaPreview(context, w, () => sendWa(context, prefs, w));
     } on ApiException catch (e) {
       if (context.mounted) toast(context, e.message);
     }
@@ -305,15 +350,42 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                            onPressed: m.mobile.isEmpty
-                                ? null
-                                : () => launchUrl(Uri.parse('https://wa.me/${_wa(m.mobile)}'), mode: LaunchMode.externalApplication),
+                            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44), foregroundColor: waGreen),
+                            onPressed: m.mobile.isEmpty ? null : () => _whatsapp(context, m),
                             icon: const Icon(Icons.chat_rounded, size: 18),
                             label: const Text('WhatsApp'),
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Panel(
+                color: AppColors.brandSoft,
+                child: Row(
+                  children: [
+                    const Icon(Icons.savings_rounded, color: AppColors.brand, size: 30),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('মোট সঞ্চয় জমা', style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                          Text(taka(d.totalSaved), style: head(26, color: AppColors.brand)),
+                          Text(
+                            bn('${d.savingCount}টি জমা${d.savingWithdrawn > 0 ? ' · সঞ্চয় থেকে উত্তোলন ${taka(d.savingWithdrawn)}' : ''}'),
+                            style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(builder: (_) => EntriesScreen(repo: repo, uid: m.uid)),
+                      ),
+                      child: const Text('তালিকা'),
                     ),
                   ],
                 ),
@@ -382,7 +454,30 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                         children: [
                           for (var i = 0; i < rows.length && i < 30; i++) ...[
                             if (i > 0) const Divider(height: 1, indent: 66, color: AppColors.line),
-                            LedgerTile(row: rows[i], showBalance: true),
+                            LedgerTile(
+                              row: rows[i],
+                              showBalance: true,
+                              onTap: (rows[i].type == 'saving' || rows[i].type == 'withdrawal') && rows[i].ref > 0
+                                  ? () async {
+                                      final r = rows[i];
+                                      final e = Entry(
+                                        id: r.ref,
+                                        type: r.type == 'saving' ? EntryType.saving : EntryType.withdrawal,
+                                        date: r.date,
+                                        method: r.method,
+                                        note: r.note,
+                                        uid: m.uid,
+                                        name: m.name,
+                                        withdrawType: r.withdrawType,
+                                        amount: r.type == 'saving' ? r.credit : r.debit,
+                                      );
+                                      final changed = await Navigator.of(context).push<bool>(
+                                        MaterialPageRoute(builder: (_) => EntryEditScreen(repo: repo, entry: e)),
+                                      );
+                                      if (changed == true) reload();
+                                    }
+                                  : null,
+                            ),
                           ],
                         ],
                       ),

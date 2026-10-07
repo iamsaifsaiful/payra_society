@@ -32,6 +32,9 @@
 
     <!-- url_launcher: open receipts in the browser, call the treasurer. -->
     <queries>
+        <!-- WhatsApp (personal) and WhatsApp Business: send messages from the chosen app. -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />

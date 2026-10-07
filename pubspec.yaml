@@ -1,7 +1,7 @@
 name: payra_society
 description: পায়রা সমিতির সদস্য ও অ্যাডমিন অ্যাপ — সঞ্চয়, বিনিয়োগ, লাভ ও রসিদ (Payra Enterprise Society Accounts প্লাগিনের API দিয়ে চলে)।
 publish_to: 'none'
-version: 1.4.0+7
+version: 1.5.0+8
 
 environment:
   sdk: '>=3.6.0 <4.0.0'

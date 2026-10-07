@@ -6,9 +6,10 @@ import '../../services/admin_more.dart';
 import '../../services/admin_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/wa_list.dart';
 import 'pickers.dart';
 
-/// সঞ্চয় জরিমানা: switch it on/off, set the rate, see and waive charges.
+/// সঞ্চয় জরিমানা: switch it on/off, set the rate and base, see and waive charges.
 class PenaltyScreen extends StatelessWidget {
   const PenaltyScreen({super.key, required this.repo});
   final AdminRepo repo;
@@ -25,8 +26,6 @@ class PenaltyScreen extends StatelessWidget {
   }
 }
 
-String rateText(double r) => bn(r == r.roundToDouble() ? r.toStringAsFixed(0) : r.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), ''));
-
 class _PenaltyBody extends StatefulWidget {
   const _PenaltyBody({required this.repo, required this.book, required this.reload});
   final AdminRepo repo;
@@ -37,8 +36,8 @@ class _PenaltyBody extends StatefulWidget {
 }
 
 class _PenaltyBodyState extends State<_PenaltyBody> {
-  late final _rate = TextEditingController(text: widget.book.rate.toStringAsFixed(widget.book.rate == widget.book.rate.roundToDouble() ? 0 : 2));
-  late bool _skipAdvance = widget.book.skipAdvance;
+  late final _rate = TextEditingController(text: rateText(widget.book.rate));
+  late String _base = widget.book.base;
   bool _busy = false;
 
   @override
@@ -49,42 +48,32 @@ class _PenaltyBodyState extends State<_PenaltyBody> {
 
   double get _rateValue => parseAmount(_rate.text).clamp(0, 100).toDouble();
 
+  String get _rule =>
+      'কোনো মাসে পুরো মাসের মধ্যে সঞ্চয় জমা না হলে পরের মাসের ১ তারিখে ${penaltyBaseOf(_base)} ${bn(rateText(_rateValue))}% জরিমানা হয়। '
+      'টাকাটা সদস্যের লভ্যাংশ থেকে কেটে প্রশাসনিক তহবিলে যায়। লভ্যাংশ কম থাকলে যতটুকু আছে ততটুকু, না থাকলে কিছুই কাটে না। '
+      'সঞ্চয় থেকে কখনো কাটে না। অগ্রিম সঞ্চয় দেওয়া থাকলে জরিমানা নেই।';
+
+  Future<bool> _confirm(String title, String body, String yes) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: Text(title),
+          content: Text(body, style: const TextStyle(height: 1.5)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('না')),
+            FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(yes)),
+          ],
+        ),
+      ) ==
+      true;
+
   Future<void> _save({required bool enabled}) async {
     final b = widget.book;
-    if (enabled && !b.enabled) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('জরিমানা চালু করবেন?'),
-          content: Text(
-            'এই মাস থেকে কার্যকর হবে। যে সদস্য পুরো মাসে সঞ্চয় দেবেন না, মাস শেষে তাঁর লভ্যাংশ থেকে ${rateText(_rateValue)}% কেটে প্রশাসনিক তহবিলে যাবে। লভ্যাংশ না থাকলে কিছু কাটবে না, সঞ্চয় থেকে কখনো না।\n\nচালু করলেই সব সক্রিয় সদস্য নোটিফিকেশন পাবেন।',
-            style: const TextStyle(height: 1.5),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('না')),
-            FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('চালু করুন')),
-          ],
-        ),
-      );
-      if (ok != true) return;
-    }
-    if (!enabled && b.enabled) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('জরিমানা বন্ধ করবেন?'),
-          content: const Text('আগে কাটা জরিমানা থেকে যাবে। বন্ধ থাকা মাসগুলোর জন্য পরে আর জরিমানা হবে না।', style: TextStyle(height: 1.5)),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('না')),
-            FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('বন্ধ করুন')),
-          ],
-        ),
-      );
-      if (ok != true) return;
-    }
+    if (enabled && !b.enabled && !await _confirm('জরিমানা চালু করবেন?', 'এই মাস থেকে কার্যকর হবে।\n\n$_rule\n\nচালু করলেই সব সক্রিয় সদস্য নোটিফিকেশন পাবেন।', 'চালু করুন')) return;
+    if (!enabled && b.enabled && !await _confirm('জরিমানা বন্ধ করবেন?', 'আগে কাটা জরিমানা যেমন আছে তেমনই থাকবে, হিসাবে কোনো গরমিল হবে না। বন্ধ থাকা মাসগুলোর জন্য পরে আর জরিমানা হবে না।', 'বন্ধ করুন')) return;
     setState(() => _busy = true);
     try {
-      await widget.repo.savePenaltySettings(enabled: enabled, rate: _rateValue, skipAdvance: _skipAdvance);
+      await widget.repo.savePenaltySettings(enabled: enabled, rate: _rateValue, base: _base);
       if (mounted) toast(context, enabled && !b.enabled ? 'চালু হয়েছে — সদস্যদের জানানো হয়েছে' : 'সংরক্ষণ হয়েছে');
       await widget.reload();
     } on ApiException catch (e) {
@@ -108,9 +97,11 @@ class _PenaltyBodyState extends State<_PenaltyBody> {
     final text = await showDialog<String>(context: context, builder: (_) => _WaiveDialog(p: p));
     if (text == null) return;
     try {
-      await widget.repo.waivePenalty(p.id, text);
-      if (mounted) toast(context, 'মওকুফ হয়েছে');
+      final wa = await widget.repo.waivePenalty(p.id, text);
+      if (!mounted) return;
+      toast(context, 'মওকুফ হয়েছে');
       await widget.reload();
+      if (mounted && wa.isNotEmpty) await showWaSheet(context, widget.repo.session.prefs, wa, title: 'সদস্যকে জানান');
     } on ApiException catch (e) {
       if (mounted) toast(context, e.message);
     }
@@ -145,28 +136,29 @@ class _PenaltyBodyState extends State<_PenaltyBody> {
                   onChanged: _busy ? null : (v) => _save(enabled: v),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'নিয়ম: কোনো মাসে পুরো মাসের মধ্যে সঞ্চয় জমা না হলে পরের মাসের ১ তারিখে লভ্যাংশের ${rateText(_rateValue)}% কেটে প্রশাসনিক তহবিলে যোগ হয়। লভ্যাংশ না থাকলে কিছু কাটে না। সঞ্চয় থেকে কখনো কাটে না। যোগদানের মাস শেষ তারিখের পরে হলে সেই মাস ধরা হয় না।',
-                  style: const TextStyle(fontSize: 13, height: 1.55),
+                Text(_rule, style: const TextStyle(fontSize: 13, height: 1.55)),
+                const SizedBox(height: 12),
+                const Text('জরিমানা কিসের উপর', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                const SizedBox(height: 6),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'monthly', label: Text('মাসিক কিস্তি')),
+                    ButtonSegment(value: 'savings', label: Text('মোট সঞ্চয়')),
+                  ],
+                  selected: {_base},
+                  onSelectionChanged: (v) => setState(() => _base = v.first),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _rate,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'জরিমানার হার (%)', helperText: 'লভ্যাংশের কত শতাংশ কাটা হবে'),
+                  decoration: const InputDecoration(labelText: 'জরিমানার হার (%)', helperText: 'নতুন হার শুধু পরের মাসগুলোতে খাটে; আগের জরিমানা বদলায় না'),
                   onChanged: (_) => setState(() {}),
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('অগ্রিম সঞ্চয় দেওয়া থাকলে জরিমানা নয়'),
-                  subtitle: const Text('যোগদান থেকে ওই মাস পর্যন্ত সব কিস্তি জমা থাকলে সেই মাসে না দিলেও কাটবে না', style: TextStyle(fontSize: 12.5)),
-                  value: _skipAdvance,
-                  activeTrackColor: AppColors.brand,
-                  onChanged: (v) => setState(() => _skipAdvance = v),
-                ),
+                const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: OutlinedButton(onPressed: _busy ? null : () => _save(enabled: b.enabled), child: const Text('হার ও নিয়ম সংরক্ষণ')),
+                  child: OutlinedButton(onPressed: _busy ? null : () => _save(enabled: b.enabled), child: const Text('হার ও ভিত্তি সংরক্ষণ')),
                 ),
               ],
             ),
@@ -179,6 +171,28 @@ class _PenaltyBodyState extends State<_PenaltyBody> {
               Expanded(child: _Stat(label: 'মওকুফ', value: taka(b.waived))),
             ],
           ),
+          if (b.history.isNotEmpty) ...[
+            const SectionTitle('চালু/বন্ধের ইতিহাস'),
+            Panel(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Column(
+                children: [
+                  for (final h in b.history.take(10))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(h.on ? Icons.toggle_on_rounded : Icons.toggle_off_rounded, color: h.on ? AppColors.brand : AppColors.muted),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(h.on ? 'চালু${h.rate > 0 ? bn(' · ${rateText(h.rate)}%') : ''}' : 'বন্ধ')),
+                          Text(bn('${dateBn(h.at)}${h.by.isEmpty ? '' : ' · ${h.by}'}'), style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           if (b.items.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 32),
@@ -194,7 +208,7 @@ class _PenaltyBodyState extends State<_PenaltyBody> {
                     ListTile(
                       title: Text(p.name.isEmpty ? p.uid : p.name, style: TextStyle(decoration: p.waived ? TextDecoration.lineThrough : null)),
                       subtitle: Text(
-                        bn('${p.uid} · লভ্যাংশ ${taka(p.base)}-এর ${rateText(p.rate)}%') + (p.waived ? '\nমওকুফ${p.note.isEmpty ? '' : ' · ${p.note}'}' : ''),
+                        bn('${p.uid} · ${p.basis}') + (p.full > p.amount + 0.004 ? '\nলভ্যাংশে যতটুকু ছিল ততটুকু কাটা হয়েছে' : '') + (p.waived ? '\nমওকুফ${p.note.isEmpty ? '' : ' · ${p.note}'}' : ''),
                         style: const TextStyle(fontSize: 12.5, height: 1.4),
                       ),
                       trailing: Row(

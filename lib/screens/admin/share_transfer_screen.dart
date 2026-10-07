@@ -6,6 +6,7 @@ import '../../services/admin_more.dart';
 import '../../services/admin_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/wa_list.dart';
 import 'pickers.dart';
 
 /// শেয়ার ট্রান্সফার: a member leaves (or sells) their share in running projects.
@@ -213,7 +214,7 @@ class _NewTransferState extends State<_NewTransfer> with AutomaticKeepAliveClien
       _error = null;
     });
     try {
-      await widget.repo.executeTransfer(_seller!.uid, alloc, pin);
+      final wa = await widget.repo.executeTransfer(_seller!.uid, alloc, pin);
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -224,6 +225,8 @@ class _NewTransferState extends State<_NewTransfer> with AutomaticKeepAliveClien
           actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ঠিক আছে'))],
         ),
       );
+      if (!mounted) return;
+      if (wa.isNotEmpty) await showWaSheet(context, widget.repo.session.prefs, wa, title: 'ক্রেতা-বিক্রেতাকে WhatsApp-এ জানান');
       if (!mounted) return;
       setState(() {
         _seller = null;

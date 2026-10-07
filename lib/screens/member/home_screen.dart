@@ -8,6 +8,7 @@ import '../../services/member_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/member_widgets.dart';
+import '../rules_screen.dart';
 import 'notifications_screen.dart';
 import 'receipts_screen.dart';
 import 'society_screen.dart';
@@ -135,6 +136,32 @@ class _HomeBody extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              if ((s.config?.rulesUpdatedAt ?? '').isNotEmpty && s.prefs.getString('rules.seen') != s.config!.rulesUpdatedAt) ...[
+                Panel(
+                  color: AppColors.brandSoft,
+                  onTap: () async {
+                    await s.prefs.setString('rules.seen', s.config!.rulesUpdatedAt);
+                    if (!context.mounted) return;
+                    await _push(context, RulesScreen(load: repo.rules));
+                    reload();
+                  },
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.gavel_rounded, color: AppColors.brand),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          bn('সমিতির নিয়মাবলি হালনাগাদ হয়েছে (${dateBn(s.config!.rulesUpdatedAt)}) — পড়ে নিন'),
+                          style: const TextStyle(fontWeight: FontWeight.w600, height: 1.4),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               ArrearsCard(arrears: home.arrears, dueDay: s.config?.dueDay ?? 10, onTap: () => goTab(1)),
               Row(
                 children: [
@@ -192,7 +219,7 @@ class _HomeBody extends StatelessWidget {
     );
   }
 
-  void _push(BuildContext context, Widget page) =>
+  Future<void> _push(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 }
 

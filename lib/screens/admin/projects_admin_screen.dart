@@ -9,6 +9,7 @@ import '../../services/admin_more.dart';
 import '../../services/admin_repo.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/wa_list.dart';
 import '../../widgets/shell_nav.dart';
 import 'entry_screen.dart';
 import 'members_screen.dart';
@@ -236,6 +237,23 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                     ),
                 ],
               ),
+              if (p.customerMobile.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(foregroundColor: waGreen),
+                  onPressed: () async {
+                    final prefs = widget.repo.session.prefs;
+                    try {
+                      final w = await widget.repo.projectWhatsapp(p.id);
+                      if (context.mounted) await showWaPreview(context, w, () => sendWa(context, prefs, w));
+                    } on ApiException catch (e) {
+                      if (context.mounted) toast(context, e.message);
+                    }
+                  },
+                  icon: const Icon(Icons.chat_rounded),
+                  label: const Text('গ্রাহককে WhatsApp-এ হিসাব / বকেয়া'),
+                ),
+              ],
               SectionTitle(bn('বিনিয়োগকারী (${d.investors.length})')),
               for (final iv in d.investors) ...[
                 Panel(
@@ -482,10 +500,11 @@ class _NewProjectScreenState extends State<NewProjectScreen> {
         'buy_date': ymd(_buyDate),
         if (_start != null) 'installment_start': ymd(_start!),
       };
-      final code = await widget.repo.createProject(project, sel);
+      final (code, wa) = await widget.repo.createProject(project, sel);
       if (!mounted) return;
       toast(context, bn('প্রজেক্ট $code তৈরি হয়েছে'));
-      Navigator.pop(context, true);
+      if (wa.isNotEmpty) await showWaSheet(context, widget.repo.session.prefs, wa, title: 'বিনিয়োগকারীদের WhatsApp-এ জানান');
+      if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = bnError(e.message));
     } finally {

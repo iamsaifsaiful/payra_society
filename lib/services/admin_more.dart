@@ -1,5 +1,7 @@
+import '../api/models.dart';
 import '../logic/format.dart';
 import 'admin_repo.dart';
+import 'whatsapp.dart';
 
 String _s(Object? v) => v?.toString() ?? '';
 Map<String, dynamic> _m(Object? v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
@@ -105,8 +107,10 @@ class Overview {
   final List<OvMember> members;
   final List<OvProject> projects;
   final List<Map<String, dynamic>> fundProjects, fundIncome, adminExpenses, welfareExpenses;
+  final List<ProjectDue> overdueProjects;
 
   const Overview({
+    this.overdueProjects = const [],
     required this.kpis,
     required this.totals,
     required this.members,
@@ -131,6 +135,7 @@ class Overview {
       fundIncome: rows(f['income']),
       adminExpenses: rows(f['adminExpenses']),
       welfareExpenses: rows(f['welfareExpenses']),
+      overdueProjects: _l(m['overdueProjects']).map(ProjectDue.fromJson).toList(),
     );
   }
 
@@ -422,8 +427,8 @@ class BrandingForm {
 
 class Penalty {
   final int id;
-  final String uid, name, month, status, waivedBy, note;
-  final double base, rate, amount;
+  final String uid, name, month, status, waivedBy, note, baseType;
+  final double base, rate, amount, profit, full;
   const Penalty({
     required this.id,
     required this.uid,
@@ -435,6 +440,9 @@ class Penalty {
     this.base = 0,
     this.rate = 0,
     this.amount = 0,
+    this.baseType = 'monthly',
+    this.profit = 0,
+    this.full = 0,
   });
   factory Penalty.fromJson(Object? j) {
     final m = _m(j);
@@ -449,20 +457,51 @@ class Penalty {
       base: toNum(m['base']),
       rate: toNum(m['rate']),
       amount: toNum(m['amount']),
+      baseType: _s(m['baseType']).isEmpty ? 'profit' : _s(m['baseType']),
+      profit: toNum(m['profit']),
+      full: toNum(m['full']),
     );
   }
   bool get waived => status == 'waived';
+
+  /// "মাসিক কিস্তি ৳৫,০০০-এর ৫%"
+  String get basis => '${penaltyBaseName(baseType)} ${taka(base)}-এর ${bn(rateText(rate))}%';
+}
+
+String rateText(double r) => r == r.roundToDouble() ? r.toStringAsFixed(0) : r.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+
+String penaltyBaseName(String t) => switch (t) {
+      'savings' => 'মোট সঞ্চয়',
+      'profit' => 'লভ্যাংশ',
+      _ => 'মাসিক কিস্তি',
+    };
+
+/// "মাসিক কিস্তির" / "মোট সঞ্চয়ের"
+String penaltyBaseOf(String t) => t == 'savings' ? 'মোট সঞ্চয়ের' : 'মাসিক কিস্তির';
+
+class PenaltySwitch {
+  final bool on;
+  final String at, by;
+  final double rate;
+  const PenaltySwitch({this.on = false, this.at = '', this.by = '', this.rate = 0});
+  factory PenaltySwitch.fromJson(Object? j) {
+    final m = _m(j);
+    return PenaltySwitch(on: m['on'] == true, at: _s(m['at']), by: _s(m['by']), rate: toNum(m['rate']));
+  }
 }
 
 class PenaltyBook {
   final bool enabled, skipAdvance;
   final double rate, totalAll, active, waived;
-  final String since, lastMonth, nextRun;
+  final String since, lastMonth, nextRun, base;
   final List<Penalty> items;
+  final List<PenaltySwitch> history;
   const PenaltyBook({
+    this.base = 'monthly',
+    this.history = const [],
     this.enabled = false,
     this.skipAdvance = true,
-    this.rate = 2,
+    this.rate = 5,
     this.totalAll = 0,
     this.active = 0,
     this.waived = 0,
@@ -478,7 +517,9 @@ class PenaltyBook {
     return PenaltyBook(
       enabled: st['enabled'] == true,
       skipAdvance: st['skipAdvance'] != false,
-      rate: st['rate'] == null ? 2 : toNum(st['rate']),
+      rate: st['rate'] == null ? 5 : toNum(st['rate']),
+      base: _s(st['base']).isEmpty ? 'monthly' : _s(st['base']),
+      history: _l(m['history']).map(PenaltySwitch.fromJson).toList(),
       since: _s(st['since']),
       lastMonth: _s(m['lastMonth']),
       nextRun: _s(m['nextRun']),
@@ -486,6 +527,127 @@ class PenaltyBook {
       active: toNum(t['active']),
       waived: toNum(t['waived']),
       items: _l(m['items']).map(Penalty.fromJson).toList(),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Entries (list + edit), project dues, rules
+
+enum EntryType { saving, withdrawal, installment, income, expense }
+
+extension EntryTypeX on EntryType {
+  String get api => name;
+  String get label => switch (this) {
+        EntryType.saving => 'সঞ্চয়',
+        EntryType.withdrawal => 'উত্তোলন',
+        EntryType.installment => 'কিস্তি',
+        EntryType.income => 'অন্যান্য আয়',
+        EntryType.expense => 'অন্যান্য ব্যয়',
+      };
+  bool get outgoing => this == EntryType.withdrawal || this == EntryType.expense;
+}
+
+class Entry {
+  final int id, projectId;
+  final EntryType type;
+  final String date, method, note, uid, name, projectCode, withdrawType, source, details;
+  final double amount;
+  const Entry({
+    required this.id,
+    required this.type,
+    this.projectId = 0,
+    this.date = '',
+    this.method = '',
+    this.note = '',
+    this.uid = '',
+    this.name = '',
+    this.projectCode = '',
+    this.withdrawType = '',
+    this.source = '',
+    this.details = '',
+    this.amount = 0,
+  });
+  factory Entry.fromJson(Object? j) {
+    final m = _m(j);
+    return Entry(
+      id: toInt(m['id']),
+      type: EntryType.values.firstWhere((t) => t.name == _s(m['type']), orElse: () => EntryType.saving),
+      projectId: toInt(m['projectId']),
+      date: _s(m['date']),
+      method: _s(m['method']),
+      note: _s(m['note']),
+      uid: _s(m['uid']),
+      name: _s(m['name']),
+      projectCode: _s(m['projectCode']),
+      withdrawType: _s(m['withdrawType']),
+      source: _s(m['source']),
+      details: _s(m['details']),
+      amount: toNum(m['amount']),
+    );
+  }
+
+  String get title => switch (type) {
+        EntryType.saving || EntryType.withdrawal => name.isEmpty ? uid : name,
+        EntryType.installment => '$projectCode · $name',
+        _ => details.isEmpty ? type.label : details,
+      };
+
+  String get subtitle => [
+        dateBn(date),
+        if (uid.isNotEmpty) uid,
+        if (type == EntryType.withdrawal) withdrawType == 'profits' ? 'লভ্যাংশ থেকে' : (withdrawType == 'total' ? 'মোট থেকে' : 'সঞ্চয় থেকে'),
+        if (type == EntryType.expense) source == 'member_welfare' ? 'কল্যাণ' : 'প্রশাসন',
+        if (method.isNotEmpty) methodBn(method),
+      ].join(' · ');
+}
+
+class EntryPage {
+  final List<Entry> items;
+  final int total;
+  final double sum;
+  const EntryPage(this.items, this.total, this.sum);
+}
+
+class ProjectDue {
+  final int id, count;
+  final String code, customer, mobile, product, missedText, lastInstallment;
+  final double sell, paid, remaining, behind;
+  final int missedMonths;
+  final WaMessage? whatsapp;
+  const ProjectDue({
+    required this.id,
+    this.count = 0,
+    this.code = '',
+    this.customer = '',
+    this.mobile = '',
+    this.product = '',
+    this.missedText = '',
+    this.lastInstallment = '',
+    this.sell = 0,
+    this.paid = 0,
+    this.remaining = 0,
+    this.behind = 0,
+    this.missedMonths = 0,
+    this.whatsapp,
+  });
+  factory ProjectDue.fromJson(Object? j) {
+    final m = _m(j);
+    return ProjectDue(
+      id: toInt(m['id']),
+      count: toInt(m['count']),
+      code: _s(m['code']),
+      customer: _s(m['customer']),
+      mobile: _s(m['mobile']),
+      product: _s(m['product']),
+      missedText: _s(m['missedText']),
+      lastInstallment: _s(m['lastInstallment']),
+      sell: toNum(m['sell']),
+      paid: toNum(m['paid']),
+      remaining: toNum(m['remaining']),
+      behind: toNum(m['behind']),
+      missedMonths: _l(m['missedMonths']).length,
+      whatsapp: m['whatsapp'] is Map ? WaMessage.fromJson(m['whatsapp']) : null,
     );
   }
 }
@@ -510,9 +672,9 @@ extension AdminRepoMore on AdminRepo {
   Future<AllocationPreview> allocationPreview(double buy, List<String> included) async =>
       AllocationPreview.fromJson(await session.api.post('/projects/allocation-preview', {'buy_amount': buy, 'included': included}));
 
-  Future<String> createProject(Map<String, dynamic> project, List<String> included) async {
+  Future<(String, List<WaMessage>)> createProject(Map<String, dynamic> project, List<String> included) async {
     final d = await session.api.post('/projects', {'project': project, 'included': included}) as Map;
-    return _s(d['project_code']);
+    return (_s(d['project_code']), WaMessage.listOf(d['whatsapp']));
   }
 
   Future<List<SharePlanProject>> sharePlan(String fromUid) async {
@@ -520,14 +682,14 @@ extension AdminRepoMore on AdminRepo {
     return _l(d['projects']).map(SharePlanProject.fromJson).toList();
   }
 
-  Future<void> executeTransfer(String fromUid, Map<int, Map<String, double>> allocations, String pin) =>
-      session.api.post('/share-transfer/execute', {
+  Future<List<WaMessage>> executeTransfer(String fromUid, Map<int, Map<String, double>> allocations, String pin) async =>
+      WaMessage.listOf(_m(await session.api.post('/share-transfer/execute', {
         'from_member_uid': fromUid,
         'pin': pin,
         'projects': [
           for (final e in allocations.entries) {'project_id': e.key, 'allocations': e.value},
         ],
-      });
+      }))['whatsapp']);
 
   Future<List<TransferBatch>> transferHistory() async {
     final d = await session.api.get('/share-transfer/history') as Map;
@@ -570,9 +732,39 @@ extension AdminRepoMore on AdminRepo {
   Future<PenaltyBook> penalties({String month = ''}) async =>
       PenaltyBook.fromJson(await session.api.get('/penalties', query: month.isEmpty ? null : {'month': month}));
 
-  Future<void> savePenaltySettings({required bool enabled, required double rate, required bool skipAdvance}) =>
-      session.api.post('/settings/app', {'penalty_enabled': enabled, 'penalty_rate': rate, 'penalty_skip_advance': skipAdvance});
+  Future<void> savePenaltySettings({required bool enabled, required double rate, required String base}) =>
+      session.api.post('/settings/app', {'penalty_enabled': enabled, 'penalty_rate': rate, 'penalty_base': base});
 
-  Future<void> waivePenalty(int id, String note) => session.api.post('/penalties/$id/waive', {'note': note});
+  Future<List<WaMessage>> waivePenalty(int id, String note) async =>
+      WaMessage.listOf(_m(await session.api.post('/penalties/$id/waive', {'note': note}))['whatsapp']);
   Future<void> restorePenalty(int id) => session.api.post('/penalties/$id/restore');
+
+  Future<EntryPage> entries(EntryType t, {String search = '', String month = '', String uid = '', int page = 1}) async {
+    final d = _m(await session.api.get('/entries/${t.api}', query: {
+      'per_page': '50',
+      'page': '$page',
+      if (search.isNotEmpty) 'search': search,
+      if (month.isNotEmpty) 'month': month,
+      if (uid.isNotEmpty) 'uid': uid,
+    }));
+    return EntryPage(_l(d['items']).map(Entry.fromJson).toList(), toInt(d['total']), toNum(d['sum']));
+  }
+
+  Future<List<WaMessage>> updateEntry(Entry e, Map<String, dynamic> changes, String pin) async =>
+      WaMessage.listOf(_m(await session.api.post('/entries/${e.type.api}/${e.id}', {...changes, 'pin': pin}))['whatsapp']);
+
+  Future<List<WaMessage>> deleteEntry(Entry e, String pin) async =>
+      WaMessage.listOf(_m(await session.api.post('/entries/${e.type.api}/${e.id}/delete', {'pin': pin}))['whatsapp']);
+
+  Future<WaMessage> memberWhatsapp(int id, {bool arrears = false}) async =>
+      WaMessage.fromJson(await session.api.get('/members/$id/whatsapp', query: arrears ? {'kind': 'arrears'} : null));
+
+  Future<WaMessage> projectWhatsapp(int id) async => WaMessage.fromJson(await session.api.get('/projects/$id/whatsapp'));
+
+  Future<List<ProjectDue>> projectDues() async => _l(_m(await session.api.get('/projects/dues'))['items']).map(ProjectDue.fromJson).toList();
+
+  Future<Rules> rules() async => Rules.fromJson(await session.api.get('/rules'));
+
+  Future<Rules> saveRules(String text, {bool notify = false}) async =>
+      Rules.fromJson(await session.api.post('/settings/rules', {'text': text, 'notify': notify}));
 }

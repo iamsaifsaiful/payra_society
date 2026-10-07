@@ -1,6 +1,7 @@
 import '../api/models.dart';
 import '../logic/format.dart';
 import 'session.dart';
+import 'whatsapp.dart';
 
 String _s(Object? v) => v?.toString() ?? '';
 
@@ -100,9 +101,12 @@ class EntryResult {
   final String memberName;
   final List<Map<String, dynamic>> distribution;
 
+  /// Ready WhatsApp texts (member's bank-style message; customer + investors for installments).
+  final List<WaMessage> whatsapp;
+
   /// Raw receipt details (installment: paidBefore, paidAfter, dueAfter …).
   final Map<String, dynamic> details;
-  const EntryResult({this.receipt, this.whatsappLink = '', this.memberName = '', this.distribution = const [], this.details = const {}});
+  const EntryResult({this.receipt, this.whatsappLink = '', this.memberName = '', this.distribution = const [], this.details = const {}, this.whatsapp = const []});
 
   factory EntryResult.fromJson(Object? j, {String memberName = ''}) {
     final m = j is Map ? j : const {};
@@ -110,6 +114,7 @@ class EntryResult {
     return EntryResult(
       receipt: r is Map && r.isNotEmpty ? Receipt.fromJson(r) : null,
       whatsappLink: _s(m['whatsappLink']),
+      whatsapp: WaMessage.listOf(m['whatsapp']),
       memberName: memberName,
       details: r is Map && r['details'] is Map ? Map<String, dynamic>.from(r['details'] as Map) : const {},
       distribution: (m['distribution'] is List ? m['distribution'] as List : const [])
@@ -126,7 +131,9 @@ class Defaulter {
   final int monthsDue;
   final double amountDue;
   final bool irregular;
-  const Defaulter(this.id, this.memberUid, this.name, this.mobile, this.monthsDue, this.amountDue, this.irregular);
+  final String dueMonthsText;
+  final WaMessage? whatsapp;
+  const Defaulter(this.id, this.memberUid, this.name, this.mobile, this.monthsDue, this.amountDue, this.irregular, {this.dueMonthsText = '', this.whatsapp});
   factory Defaulter.fromJson(Object? j) {
     final m = j is Map ? j : const {};
     return Defaulter(
@@ -137,6 +144,8 @@ class Defaulter {
       toInt(m['monthsDue']),
       toNum(m['amountDue']),
       m['irregular'] == true,
+      dueMonthsText: _s(m['dueMonthsText']),
+      whatsapp: m['whatsapp'] is Map ? WaMessage.fromJson(m['whatsapp']) : null,
     );
   }
 }

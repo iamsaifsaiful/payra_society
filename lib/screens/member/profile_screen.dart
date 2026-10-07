@@ -10,6 +10,7 @@ import '../../theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/shell_nav.dart';
 import '../../widgets/statement_export.dart';
+import '../rules_screen.dart';
 import 'receipts_screen.dart';
 import 'society_screen.dart';
 
@@ -98,6 +99,13 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   _Nav(icon: Icons.receipt_long_rounded, text: 'আমার রসিদ', page: ReceiptsScreen(repo: repo)),
                   _Nav(icon: Icons.groups_rounded, text: 'সমিতির হিসাব ও তহবিল', page: SocietyScreen(repo: repo)),
+                  ListTile(
+                    leading: const Icon(Icons.gavel_rounded, color: AppColors.brand),
+                    title: const Text('সমিতির নিয়মাবলি'),
+                    subtitle: (s.config?.rulesUpdatedAt ?? '').isEmpty ? null : Text(bn('হালনাগাদ ${dateBn(s.config!.rulesUpdatedAt)}')),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => RulesScreen(load: repo.rules))),
+                  ),
                 ],
               ),
             ),
