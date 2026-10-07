@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:payra_society/api/api_client.dart';
 import 'package:payra_society/main.dart';
 import 'package:payra_society/screens/admin/admin_shell.dart';
+import 'package:payra_society/screens/admin/penalty_screen.dart';
 import 'package:payra_society/screens/admin/pickers.dart';
 import 'package:payra_society/services/admin_more.dart';
 import 'package:payra_society/services/admin_repo.dart';
@@ -21,6 +22,9 @@ http.Response _res(Object body, [int status = 200]) => http.Response.bytes(
     );
 
 Map<String, dynamic>? lastSaving;
+Map<String, dynamic>? lastPenaltySettings;
+String? lastWaive;
+bool penaltyOn = false;
 
 http.Response _route(http.Request r) {
   Map<String, dynamic> ok(Object data) => {'success': true, 'data': data};
@@ -81,6 +85,24 @@ http.Response _route(http.Request r) {
       }));
     case 'GET /withdrawals/member/PSM1001/balances':
       return _res(ok({'current': 16250, 'profits': 965.63, 'total': 17215.63}));
+    case 'GET /penalties':
+      return _res(ok({
+        'settings': {'enabled': penaltyOn, 'rate': 2, 'since': penaltyOn ? '2026-10' : '', 'skipAdvance': true},
+        'lastMonth': '2026-09',
+        'nextRun': '2026-11-01',
+        'totalAll': 19.31,
+        'items': [
+          {'id': 5, 'uid': 'PSM1001', 'name': 'রফিকুল ইসলাম', 'month': '2026-09', 'base': 965.63, 'rate': 2, 'amount': 19.31, 'status': 'active'},
+        ],
+        'totals': {'active': 19.31, 'waived': 0, 'count': 1},
+      }));
+    case 'POST /settings/app':
+      lastPenaltySettings = Map<String, dynamic>.from(jsonDecode(r.body) as Map);
+      penaltyOn = lastPenaltySettings!['penalty_enabled'] == true;
+      return _res(ok({'penalty_enabled': penaltyOn}));
+    case 'POST /penalties/5/waive':
+      lastWaive = (jsonDecode(r.body) as Map)['note'] as String?;
+      return _res(ok({'id': 5, 'status': 'waived'}));
     case 'POST /savings':
       lastSaving = Map<String, dynamic>.from(jsonDecode(r.body) as Map);
       return _res(ok({
@@ -187,5 +209,41 @@ void main() {
     await tester.tap(find.byTooltip('পেছনে'));
     await tester.pumpAndSettle();
     expect(find.text('প্রশাসন তহবিল'), findsOneWidget);
+  });
+
+  testWidgets('penalty: switching on asks first, then waiving sends the reason', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(420, 1800));
+    SharedPreferences.setMockInitialValues({'site': 'https://payra.test'});
+    final s = Session(
+      api: ApiClient(client: MockClient((r) async => _route(r))),
+      prefs: await Prefs.open(),
+      tokens: MemoryTokenStore(),
+    );
+    await s.load();
+    await s.login('admin', 'x');
+    await tester.pumpWidget(MaterialApp(home: PenaltyScreen(repo: AdminRepo(s))));
+    await tester.pumpAndSettle();
+    expect(find.text('জরিমানা বন্ধ আছে'), findsOneWidget);
+    expect(find.text('রফিকুল ইসলাম'), findsOneWidget);
+    expect(find.text('−৳ ১৯.৩১'), findsOneWidget);
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+    expect(find.text('জরিমানা চালু করবেন?'), findsOneWidget);
+    await tester.tap(find.text('চালু করুন'));
+    await tester.pumpAndSettle();
+    expect(lastPenaltySettings?['penalty_enabled'], true);
+    expect(lastPenaltySettings?['penalty_rate'], 2);
+    expect(lastPenaltySettings!.containsKey('monthly_saving'), isFalse); // other settings untouched
+    expect(find.text('জরিমানা চালু আছে'), findsOneWidget);
+
+    await tester.tap(find.byType(PopupMenuButton<String>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('মওকুফ করুন').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'কারণ (ঐচ্ছিক)'), 'অসুস্থ ছিলেন');
+    await tester.tap(find.widgetWithText(FilledButton, 'মওকুফ করুন'));
+    await tester.pumpAndSettle();
+    expect(lastWaive, 'অসুস্থ ছিলেন');
   });
 }

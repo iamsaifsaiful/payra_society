@@ -29,6 +29,9 @@ class AppConfig {
   final List<int> reminderDays;
   final int irregularAfterMonths;
   final String minAppVersion, latestAppVersion, apkUrl, treasurerPhone;
+  final bool penaltyEnabled;
+  final double penaltyRate;
+  final String penaltySince;
 
   const AppConfig({
     required this.apiVersion,
@@ -41,6 +44,9 @@ class AppConfig {
     this.latestAppVersion = '1.0.0',
     this.apkUrl = '',
     this.treasurerPhone = '',
+    this.penaltyEnabled = false,
+    this.penaltyRate = 0,
+    this.penaltySince = '',
   });
 
   factory AppConfig.fromJson(Object? j) {
@@ -58,6 +64,9 @@ class AppConfig {
       latestAppVersion: _str(a['latestVersion']).isEmpty ? '1.0.0' : _str(a['latestVersion']),
       apkUrl: _str(a['apkUrl']),
       treasurerPhone: _str(m['treasurerPhone']),
+      penaltyEnabled: _map(m['penalty'])['enabled'] == true,
+      penaltyRate: toNum(_map(m['penalty'])['rate']),
+      penaltySince: _str(_map(m['penalty'])['since']),
     );
   }
 }
@@ -124,11 +133,14 @@ class MemberSummary {
   }
 }
 
+/// "2.00" → "2", "2.50" → "2.5".
+String _rate(double r) => r == r.roundToDouble() ? r.toStringAsFixed(0) : r.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+
 /// One line of the member ledger. Types: saving, investment, distribution,
-/// share_sale, withdrawal, opening.
+/// share_sale, withdrawal, penalty (savings penalty, from profit), opening.
 class StatementRow {
-  final String date, type, note, projectCode, method, withdrawType;
-  final double credit, debit, balance, capital, profit;
+  final String date, type, note, projectCode, method, withdrawType, month;
+  final double credit, debit, balance, capital, profit, rate, base;
   final int ref;
 
   const StatementRow({
@@ -144,6 +156,9 @@ class StatementRow {
     this.capital = 0,
     this.profit = 0,
     this.ref = 0,
+    this.month = '',
+    this.rate = 0,
+    this.base = 0,
   });
 
   factory StatementRow.fromJson(Object? j) {
@@ -161,6 +176,9 @@ class StatementRow {
       capital: toNum(m['capital']),
       profit: toNum(m['profit']),
       ref: toInt(m['ref']),
+      month: _str(m['month']),
+      rate: toNum(m['rate']),
+      base: toNum(m['base']),
     );
   }
 
@@ -182,6 +200,8 @@ class StatementRow {
         return withdrawType == 'profits' ? 'লাভ উত্তোলন' : 'উত্তোলন';
       case 'opening':
         return 'প্রারম্ভিক ব্যালেন্স';
+      case 'penalty':
+        return 'সঞ্চয় জরিমানা · ${month.isEmpty ? '' : monthBn(month)}';
     }
     return note.isEmpty ? type : note;
   }
@@ -191,6 +211,8 @@ class StatementRow {
     final parts = <String>[dateBn(date)];
     if (type == 'distribution') {
       parts.add('মূলধন ${taka(capital)} + লাভ ${taka(profit)}');
+    } else if (type == 'penalty') {
+      parts.add('লভ্যাংশ ${taka(base)}-এর ${bn(_rate(rate))}% · প্রশাসনিক তহবিলে');
     } else if (method.isNotEmpty) {
       parts.add(methodBn(method));
     }

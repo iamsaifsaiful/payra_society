@@ -149,6 +149,11 @@ class AppSettings {
   bool remindersEnabled;
   String minAppVersion, latestAppVersion, apkUrl, treasurerPhone;
 
+  /// Savings penalty. Changed only from the penalty screen (see [penaltyJson]).
+  bool penaltyEnabled, penaltySkipAdvance;
+  double penaltyRate;
+  String penaltyStart;
+
   AppSettings({
     this.monthlySaving = 0,
     this.dueDay = 10,
@@ -159,6 +164,10 @@ class AppSettings {
     this.latestAppVersion = '1.0.0',
     this.apkUrl = '',
     this.treasurerPhone = '',
+    this.penaltyEnabled = false,
+    this.penaltySkipAdvance = true,
+    this.penaltyRate = 2,
+    this.penaltyStart = '',
   });
 
   factory AppSettings.fromJson(Object? j) {
@@ -173,6 +182,10 @@ class AppSettings {
       latestAppVersion: _s(m['latest_app_version']),
       apkUrl: _s(m['apk_url']),
       treasurerPhone: _s(m['treasurer_phone']),
+      penaltyEnabled: m['penalty_enabled'] == true,
+      penaltySkipAdvance: m['penalty_skip_advance'] != false,
+      penaltyRate: m['penalty_rate'] == null ? 2 : toNum(m['penalty_rate']),
+      penaltyStart: _s(m['penalty_start']),
     );
   }
 
@@ -186,6 +199,12 @@ class AppSettings {
         'latest_app_version': latestAppVersion,
         'apk_url': apkUrl,
         'treasurer_phone': treasurerPhone,
+      };
+
+  Map<String, dynamic> penaltyJson() => {
+        'penalty_enabled': penaltyEnabled,
+        'penalty_rate': penaltyRate,
+        'penalty_skip_advance': penaltySkipAdvance,
       };
 }
 

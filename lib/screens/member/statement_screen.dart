@@ -26,7 +26,7 @@ extension on LedgerFilter {
         LedgerFilter.all => true,
         LedgerFilter.saving => r.type == 'saving',
         LedgerFilter.profit => r.type == 'distribution' || r.type == 'share_sale',
-        LedgerFilter.withdrawal => r.type == 'withdrawal',
+        LedgerFilter.withdrawal => r.type == 'withdrawal' || r.type == 'penalty',
         LedgerFilter.investment => r.type == 'investment',
       };
 }
@@ -224,6 +224,14 @@ class _List extends StatelessWidget {
                   Expanded(child: _Sum(label: 'নিট পরিবর্তন', value: taka(t.net, sign: true), positive: t.net >= 0)),
                 ],
               ),
+              if (t.penalty > 0) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _Sum(label: 'সঞ্চয় জরিমানা (লভ্যাংশ থেকে)', value: taka(-t.penalty), positive: false)),
+                  ],
+                ),
+              ],
               if (data.rows.isNotEmpty) ...[
                 const Divider(height: 24, color: AppColors.line),
                 Row(

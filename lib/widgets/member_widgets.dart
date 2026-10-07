@@ -19,6 +19,7 @@ class LedgerTile extends StatelessWidget {
         'distribution' => Icons.trending_up_rounded,
         'share_sale' => Icons.swap_horiz_rounded,
         'withdrawal' => Icons.north_east_rounded,
+        'penalty' => Icons.gavel_rounded,
         _ => Icons.flag_rounded,
       };
 

@@ -69,6 +69,13 @@ class SavingsScreen extends StatelessWidget {
                         'টাকা জমা দেওয়ার পর অ্যাডমিন এন্ট্রি দিলেই সঞ্চয়ে যোগ হবে আর রসিদ পাবেন।',
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, height: 1.5),
                       ),
+                      if (cfg?.penaltyEnabled == true) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'মনে রাখবেন: কোনো মাসে সঞ্চয় না দিলে মাস শেষে লভ্যাংশ থেকে ${bn(cfg!.penaltyRate.toStringAsFixed(cfg.penaltyRate == cfg.penaltyRate.roundToDouble() ? 0 : 2))}% জরিমানা কাটা হয়।',
+                          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.5, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ],
                   ),
                 ),

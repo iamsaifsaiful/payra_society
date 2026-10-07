@@ -121,6 +121,32 @@ void main() {
     });
   });
 
+  test('penalty rows come off the balance and read clearly', () {
+    // Shape returned by plugin 1.0.9.62 /member/statement.
+    final rows = [
+      {'tx_date': '2026-08-05', 'type': 'saving', 'credit': 5000, 'debit': 0, 'balance': 5000},
+      {'tx_date': '2026-08-20', 'type': 'distribution', 'capital': 0, 'profit': 965.63, 'credit': 965.63, 'debit': 0, 'balance': 5965.63},
+      {'tx_date': '2026-09-30', 'type': 'penalty', 'month': '2026-09', 'rate': 2, 'base': 965.63, 'credit': 0, 'debit': 19.31, 'balance': 5946.32},
+    ].map(StatementRow.fromJson).toList();
+    final p = rows.last;
+    expect(p.title, 'সঞ্চয় জরিমানা · সেপ্টেম্বর ২০২৬');
+    expect(p.subtitle, contains('লভ্যাংশ ৳ ৯৬৫.৬৩-এর ২%'));
+    final t = LedgerTotals.of(rows);
+    expect(t.penalty, 19.31);
+    expect(t.net, closeTo(rows.last.balance, 0.001));
+  });
+
+  test('config reads the penalty switch', () {
+    final c = AppConfig.fromJson({
+      'apiVersion': '1.0.9.62',
+      'branding': {'name': 'x'},
+      'penalty': {'enabled': true, 'rate': 2, 'since': '2026-10'},
+    });
+    expect(c.penaltyEnabled, isTrue);
+    expect(c.penaltyRate, 2);
+    expect(AppConfig.fromJson({'branding': {}}).penaltyEnabled, isFalse);
+  });
+
   test('arrears streak counts paid months from the newest', () {
     final a = Arrears.fromJson({
       'configured': true,

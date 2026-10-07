@@ -417,6 +417,79 @@ class BrandingForm {
       };
 }
 
+// ---------------------------------------------------------------------------
+// Savings penalty (plugin 1.0.9.62)
+
+class Penalty {
+  final int id;
+  final String uid, name, month, status, waivedBy, note;
+  final double base, rate, amount;
+  const Penalty({
+    required this.id,
+    required this.uid,
+    this.name = '',
+    this.month = '',
+    this.status = 'active',
+    this.waivedBy = '',
+    this.note = '',
+    this.base = 0,
+    this.rate = 0,
+    this.amount = 0,
+  });
+  factory Penalty.fromJson(Object? j) {
+    final m = _m(j);
+    return Penalty(
+      id: toInt(m['id']),
+      uid: _s(m['uid']),
+      name: _s(m['name']),
+      month: _s(m['month']),
+      status: _s(m['status']),
+      waivedBy: _s(m['waivedBy']),
+      note: _s(m['note']),
+      base: toNum(m['base']),
+      rate: toNum(m['rate']),
+      amount: toNum(m['amount']),
+    );
+  }
+  bool get waived => status == 'waived';
+}
+
+class PenaltyBook {
+  final bool enabled, skipAdvance;
+  final double rate, totalAll, active, waived;
+  final String since, lastMonth, nextRun;
+  final List<Penalty> items;
+  const PenaltyBook({
+    this.enabled = false,
+    this.skipAdvance = true,
+    this.rate = 2,
+    this.totalAll = 0,
+    this.active = 0,
+    this.waived = 0,
+    this.since = '',
+    this.lastMonth = '',
+    this.nextRun = '',
+    this.items = const [],
+  });
+  factory PenaltyBook.fromJson(Object? j) {
+    final m = _m(j);
+    final st = _m(m['settings']);
+    final t = _m(m['totals']);
+    return PenaltyBook(
+      enabled: st['enabled'] == true,
+      skipAdvance: st['skipAdvance'] != false,
+      rate: st['rate'] == null ? 2 : toNum(st['rate']),
+      since: _s(st['since']),
+      lastMonth: _s(m['lastMonth']),
+      nextRun: _s(m['nextRun']),
+      totalAll: toNum(m['totalAll']),
+      active: toNum(t['active']),
+      waived: toNum(t['waived']),
+      items: _l(m['items']).map(Penalty.fromJson).toList(),
+    );
+  }
+}
+
 extension AdminRepoMore on AdminRepo {
   Future<Overview> overview() async => Overview.fromJson(await session.cachedGet('/admin/overview'));
 
@@ -493,4 +566,13 @@ extension AdminRepoMore on AdminRepo {
     await session.api.post('/settings/branding', f.toJson());
     await session.refreshConfig();
   }
+
+  Future<PenaltyBook> penalties({String month = ''}) async =>
+      PenaltyBook.fromJson(await session.api.get('/penalties', query: month.isEmpty ? null : {'month': month}));
+
+  Future<void> savePenaltySettings({required bool enabled, required double rate, required bool skipAdvance}) =>
+      session.api.post('/settings/app', {'penalty_enabled': enabled, 'penalty_rate': rate, 'penalty_skip_advance': skipAdvance});
+
+  Future<void> waivePenalty(int id, String note) => session.api.post('/penalties/$id/waive', {'note': note});
+  Future<void> restorePenalty(int id) => session.api.post('/penalties/$id/restore');
 }

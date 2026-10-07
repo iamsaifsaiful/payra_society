@@ -36,7 +36,7 @@ enum Kpi {
         Kpi.installmentsDue => 'বিক্রয়মূল্য − এ পর্যন্ত আদায় হওয়া কিস্তি।',
         Kpi.currentBalance => 'সঞ্চয় − চলমান বিনিয়োগ − সঞ্চয় থেকে উত্তোলন। লাভ আলাদা দেখানো হয়।',
         Kpi.availableProfits => 'সদস্যদের পাওয়া লাভ থেকে লাভ-উত্তোলন বাদে যা জমা আছে।',
-        Kpi.administrationFunds => 'প্রজেক্টের লাভের ৫% + অন্যান্য আয়ের ৮০% − প্রশাসনিক খরচ।',
+        Kpi.administrationFunds => 'প্রজেক্টের লাভের ৫% + অন্যান্য আয়ের ৮০% + সঞ্চয় জরিমানা − প্রশাসনিক খরচ।',
         Kpi.memberWelfareFunds => 'প্রজেক্টের লাভের ৫% + অন্যান্য আয়ের ২০% − সদস্য কল্যাণ খরচ।',
       };
 
@@ -294,6 +294,10 @@ class KpiDetailScreen extends StatelessWidget {
               valueColor: AppColors.credit,
             )));
         if (o.fundIncome.isEmpty) children.add(const _Empty());
+        if (admin && o.t('penalties') > 0) {
+          children.add(const _Head('সঞ্চয় জরিমানা থেকে (১০০%)'));
+          children.add(_Row(title: 'সদস্যদের লভ্যাংশ থেকে কাটা জরিমানা', sub: 'আরও → সঞ্চয় জরিমানা', value: taka(o.t('penalties'), sign: true), valueColor: AppColors.credit));
+        }
         final ex = admin ? o.adminExpenses : o.welfareExpenses;
         children.add(_Head(admin ? 'প্রশাসনিক খরচ' : 'সদস্য কল্যাণ খরচ'));
         children.addAll(ex.map((r) => _Row(

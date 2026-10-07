@@ -93,8 +93,8 @@ List<ProjectStake> buildStakes(List<Investment> inv, List<StatementRow> ledger) 
 
 /// Totals for a list of ledger rows (used on the লেনদেন screen).
 class LedgerTotals {
-  double saved = 0, profit = 0, capitalBack = 0, withdrawn = 0, invested = 0;
-  double get net => saved + profit + capitalBack - withdrawn - invested;
+  double saved = 0, profit = 0, capitalBack = 0, withdrawn = 0, invested = 0, penalty = 0;
+  double get net => saved + profit + capitalBack - withdrawn - invested - penalty;
 
   static LedgerTotals of(Iterable<StatementRow> rows) {
     final t = LedgerTotals();
@@ -111,6 +111,8 @@ class LedgerTotals {
           t.withdrawn += r.debit;
         case 'investment':
           t.invested += r.debit;
+        case 'penalty':
+          t.penalty += r.debit;
       }
     }
     return t;

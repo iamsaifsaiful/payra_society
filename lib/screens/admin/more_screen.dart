@@ -15,6 +15,7 @@ import '../../widgets/statement_export.dart';
 import 'branding_screen.dart';
 import 'collections_screen.dart';
 import 'money_screen.dart';
+import 'penalty_screen.dart';
 import 'share_transfer_screen.dart';
 
 const releaseApkUrl = 'https://github.com/iamsaifsaiful/payra_society/releases/latest/download/payra-society.apk';
@@ -73,6 +74,13 @@ class AdminMoreScreen extends StatelessWidget {
                   subtitle: const Text('কার কত মাস বকেয়া, WhatsApp রিমাইন্ডার'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _push(context, CollectionsScreen(repo: repo)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.gavel_rounded, color: AppColors.brand),
+                  title: const Text('সঞ্চয় জরিমানা'),
+                  subtitle: Text(s.config?.penaltyEnabled == true ? 'চালু · মাস শেষে লভ্যাংশ থেকে' : 'বন্ধ · চালু করুন, হার, মওকুফ'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _push(context, PenaltyScreen(repo: repo)),
                 ),
                 ListTile(
                   leading: const Icon(Icons.swap_horiz_rounded, color: AppColors.brand),

@@ -7,7 +7,7 @@ import '../api/models.dart';
 import 'storage.dart';
 
 /// App version shown to the server's min/latest version check.
-const appVersion = '1.3.0';
+const appVersion = '1.4.0';
 
 /// The society's website, built into the app so nobody has to type it.
 /// Another society can build with `--dart-define=PAYRA_SITE=https://...`.
